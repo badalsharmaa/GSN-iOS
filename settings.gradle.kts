@@ -25,6 +25,7 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        maven("https://repo.korge.org/maven")
     }
 }
 
@@ -52,3 +53,13 @@ include(":libraries:architecture")
 include(":libraries:gsn-matrix")
 include(":libraries:gsn-matrix:api")
 include(":libraries:kmputils")
+include(":libraries:gsn-matrix:impl")
+include(":appconfig")
+include(":libraries:network")
+include(":libraries:featureflag")
+include(":configHelper")
+include(":libraries:featureflag:api")
+include(":libraries:featureflag:impl")
+include(":libraries:preferences")
+include(":libraries:preferences:api")
+include(":libraries:preferences:impl")

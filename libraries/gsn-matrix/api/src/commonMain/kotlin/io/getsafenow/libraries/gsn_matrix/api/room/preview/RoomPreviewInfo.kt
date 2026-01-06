@@ -1,7 +1,7 @@
 package io.getsafenow.libraries.gsn_matrix.api.room.preview
 
 import io.getsafenow.libraries.gsn_matrix.api.room.CurrentUserMembership
-import io.element.android.libraries.matrix.api.room.RoomType
+import io.getsafenow.libraries.gsn_matrix.api.room.RoomType
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomAlias
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
 import io.getsafenow.libraries.gsn_matrix.api.room.join.JoinRule

@@ -63,6 +63,7 @@ kotlin {
                 // Add KMP dependencies here
                 //----------------------------------------------------//
                 implementation(projects.libraries.architecture)
+                implementation(projects.libraries.kmputils)
             }
         }
 

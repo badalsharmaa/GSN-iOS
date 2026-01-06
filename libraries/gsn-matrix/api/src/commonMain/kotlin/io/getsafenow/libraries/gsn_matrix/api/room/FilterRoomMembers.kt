@@ -1,6 +1,7 @@
 package io.getsafenow.libraries.gsn_matrix.api.room
 
-import io.element.android.libraries.matrix.api.room.roomMembers
+import io.getsafenow.libraries.gsn_core.helpers.defaultFalse
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 
@@ -18,7 +19,7 @@ suspend fun BaseRoom.filterMembers(query: String, coroutineContext: CoroutineCon
     } else {
         activeRoomMembers.filter { member ->
             member.userId.value.contains(query, ignoreCase = true) ||
-                member.displayName?.contains(query, ignoreCase = true).orFalse()
+                member.displayName?.contains(query, ignoreCase = true).defaultFalse()
         }
     }
     filteredMembers

@@ -7,5 +7,4 @@ import me.tatarka.inject.annotations.Scope
  *
  * Use this to scope dependencies to the lifetime of a single chat room.
  */
-@Scope
-annotation class RoomScopeGsn
+abstract class RoomScopeGsn private constructor()

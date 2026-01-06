@@ -1,9 +1,6 @@
 package io.getsafenow.libraries.gsn_matrix.api.room
 
 
-import io.element.android.libraries.matrix.api.room.MessageEventType
-import io.element.android.libraries.matrix.api.room.RoomMembersState
-import io.element.android.libraries.matrix.api.room.StateEventType
 import io.getsafenow.libraries.gsn_matrix.api.core.EventId
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
 import io.getsafenow.libraries.gsn_matrix.api.core.SessionId
@@ -12,6 +9,8 @@ import io.getsafenow.libraries.gsn_matrix.api.core.UserId
 import io.getsafenow.libraries.gsn_matrix.api.room.draft.ComposerDraft
 import io.getsafenow.libraries.gsn_matrix.api.room.powerlevels.RoomPowerLevelsValues
 import io.getsafenow.libraries.gsn_matrix.api.room.tombstone.PredecessorRoom
+import io.getsafenow.libraries.gsn_matrix.api.roomdirectory.RoomVisibility
+import io.getsafenow.libraries.gsn_matrix.api.timeline.ReceiptType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import okio.Closeable
@@ -37,7 +36,7 @@ interface BaseRoom : Closeable {
 
     /**
      * The current loaded members as a StateFlow.
-     * Initial value is [io.element.android.libraries.matrix.api.room.RoomMembersState.Unknown].
+     * Initial value is [RoomMembersState.Unknown].
      * To update them you should call [updateMembers].
      */
     val membersStateFlow: StateFlow<RoomMembersState>

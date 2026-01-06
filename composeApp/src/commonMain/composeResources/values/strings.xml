@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">GetSafeNowClient</string>
     <string name="greeting">Hello, world!</string>
     <string name="welcome_message">Welcome, %s!</string>
 </resources>

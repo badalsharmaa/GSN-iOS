@@ -4,14 +4,15 @@ android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.11.0"
+trixnity = "4.22.5"
 androidx-appcompat = "1.7.1"
 androidx-core = "1.17.0"
 androidx-espresso = "3.7.0"
-androidx-lifecycle = "2.9.3"
+androidx-lifecycle = "2.9.4"
 androidx-testExt = "1.3.0"
-composeMultiplatform = "1.8.2"
+composeMultiplatform = "1.9.0"
 junit = "4.13.2"
-kotlin = "2.2.10"
+kotlin = "2.2.20"
 kotlinStdlib = "2.2.20"
 runner = "1.7.0"
 core = "1.7.0"
@@ -22,17 +23,47 @@ koin = "4.1.0"
 kotlinx-datetime = "0.7.1"
 squareup-okio = "3.16.0"
 ksp = "2.2.10-2.0.2"
-kotlinInject = "0.7.1"
+kotlinInject = "0.8.0"
 kotlinxCollectionsImmutable="0.4.0"
 decompose = "3.3.0"
 essenty  = "2.5.0"
 molecule = "2.1.0"
 buildkonfig = "0.15.2"
+sqldelight = "2.1.0"
+kotlinx-serialization = "1.9.0"
+kotlin-inject-anvil ="0.1.6"
+ktorfit = "2.6.4"
+ktor = "3.3.0"
+datastore = "1.1.7"
+stately = "2.1.0"
+multiplatform-settings = "1.3.0"
+room = "2.8.3"
+sqlite = "2.6.1"
+compose-material3-expressive = "1.9.0-alpha04"
+camerax = "1.5.1"
+media3 = "1.8.0"
+compose-icons = "1.1.1"
+webrtc-kmp = "0.125.11"
+arrow = "1.2.4"
+
 
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+trixnity-client = { module = "net.folivo:trixnity-client", version.ref = "trixnity" }
+trixnity-client-media-okio = { module = "net.folivo:trixnity-client-media-okio", version.ref = "trixnity" }
+trixnity-client-repository-room = { group = "net.folivo", name = "trixnity-client-repository-room", version.ref = "trixnity" }
+sqlite-driver-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+material3-expressive = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3-expressive" }
+
+icons-fontawesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "compose-icons" }
+
+multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
+
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
@@ -52,6 +83,7 @@ koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin"
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
 squareup-okio = {group = "com.squareup.okio", name = "okio", version.ref = "squareup-okio"}
 kotlinInject-runtime = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "kotlinInject" }
+kotlinInject-runtime-kmp = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInject" }
 kotlinInject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInject" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
@@ -60,9 +92,92 @@ decompose-extensions-compose = { module = "com.arkivanov.decompose:extensions-co
 essenty-lifecycle = { module = "com.arkivanov.essenty:lifecycle", version.ref = "essenty" }
 essenty-back      = { module = "com.arkivanov.essenty:back-handler", version.ref = "essenty" }
 molecule-runtime = { module = "app.cash.molecule:molecule-runtime", version.ref = "molecule" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+stately-common = { group = "co.touchlab", name = "stately-concurrent-collections", version.ref = "stately" }
+arrow-atomic = { module = "io.arrow-kt:arrow-atomic", version.ref = "arrow" }
+arrow-continuations = { module = "io.arrow-kt:arrow-continuations", version.ref = "arrow" }
+arrow-annotations = { module = "io.arrow-kt:arrow-annotations", version.ref = "arrow" }
+arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+arrow-resilience = { module = "io.arrow-kt:arrow-resilience", version.ref = "arrow" }
+#preferences
+androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+#ktor
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-resources = { module = "io.ktor:ktor-resources", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktorfit-lib = { module = "de.jensklingenberg.ktorfit:ktorfit-lib", version.ref = "ktorfit" }
 
-#Android Only Dependencies----
+#anvil
+kotlinInject-anvil-compiler = { group = "software.amazon.lastmile.kotlin.inject.anvil", name = "compiler", version.ref = "kotlin-inject-anvil" }
+kotlinInject-anvil-runtime = { group = "software.amazon.lastmile.kotlin.inject.anvil", name = "runtime", version.ref = "kotlin-inject-anvil" }
+kotlinInject-anvil-runtime-optional = { group = "software.amazon.lastmile.kotlin.inject.anvil", name = "runtime-optional", version.ref = "kotlin-inject-anvil" }
+
+#SqlDelight
+sqldelight-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-jvm = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+
+#WebRtc KMP
+webrtc-kmp = { module = "com.shepeliev:webrtc-kmp", version.ref = "webrtc-kmp" }
+
+#Android Only Dependencies Starts here ----
 androidx_exifinterface = "androidx.exifinterface:exifinterface:1.4.1"
+sqlcipher = "net.zetetic:sqlcipher-android:4.10.0"
+
+#CameraX Android Dependencies --
+camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
+camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+camera-video = { module = "androidx.camera:camera-video", version.ref = "camerax" }
+camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
+camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "camerax" }
+
+# Exo Player Android Dependecies --
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-exoplayer-dash = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
+
+
+[bundles]
+kotlinInjectAnvil = [
+    "kotlinInject-runtime",
+    "kotlinInject-anvil-runtime",
+    "kotlinInject-anvil-runtime-optional"
+]
+
+arrow = [
+    "arrow-atomic",
+    "arrow-continuations",
+    "arrow-annotations",
+    "arrow-core",
+    "arrow-resilience"
+]
+
+# Android specific bundles-
+
+camerax = [
+    "camera-core",
+    "camera-camera2",
+    "camera-lifecycle",
+    "camera-video",
+    "camera-view",
+    "camera-extensions"
+]
+
+media3 = [
+    "media3-exoplayer",
+    "media3-exoplayer-dash",
+    "media3-ui",
+    "media3-ui-compose"
+]
 
 
 
@@ -83,3 +198,6 @@ androidLint = { id = "com.android.lint", version.ref = "agp" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+ktorfit = { id = "de.jensklingenberg.ktorfit", version.ref = "ktorfit" }
+androidx-room = { id = "androidx.room", version.ref = "room" }

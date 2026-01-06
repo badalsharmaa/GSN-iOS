@@ -1,6 +1,9 @@
 package io.getsafenow.libraries.gsn_matrix.api.createroom
 
 import io.getsafenow.libraries.gsn_matrix.api.core.UserId
+import io.getsafenow.libraries.gsn_matrix.api.room.history.RoomHistoryVisibility
+import io.getsafenow.libraries.gsn_matrix.api.room.join.JoinRule
+import io.getsafenow.libraries.gsn_matrix.api.roomdirectory.RoomVisibility
 import io.getsafenow.libraries.kmputils.platformkmp.KmpOptional
 
 

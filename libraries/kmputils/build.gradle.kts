@@ -67,9 +67,15 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
+                implementation(libs.co.kermit.logger)
+                implementation(libs.androidx.datastore.preferences)
+                implementation(libs.androidx.datastore)
+                implementation(libs.bundles.kotlinInjectAnvil)
+                //api(libs.matrix.analytics.events)
                 // Add KMP dependencies here
                 //----------------------------------------------------//
                 implementation(projects.libraries.di)
+                implementation(projects.libraries.gsnCore)
             }
         }
 

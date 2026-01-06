@@ -9,5 +9,4 @@ import me.tatarka.inject.annotations.Scope
  * Dependencies annotated/bound in this scope live for the lifetime of an active session
  * and are disposed when the client logs out.
  */
-@Scope
-annotation class SessionScopeGsn
+abstract class SessionScopeGsn private constructor()

@@ -1,5 +1,7 @@
 package io.getsafenow.libraries.gsn_matrix.api.notificationsettings
 
+import io.getsafenow.libraries.gsn_matrix.api.room.RoomNotificationMode
+import io.getsafenow.libraries.gsn_matrix.api.room.RoomNotificationSettings
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
 import kotlinx.coroutines.flow.SharedFlow
 

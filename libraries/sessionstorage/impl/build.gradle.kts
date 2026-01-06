@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.androidLint)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -63,8 +64,12 @@ kotlin {
                 implementation(libs.androidx.lifecycle.runtimeCompose)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
+                implementation(libs.sqldelight.coroutines)
+               // implementation(libs.kotlinInject.runtime)
+                implementation(libs.bundles.kotlinInjectAnvil)
                 //-----------------------------------------------------//
                 api(projects.libraries.sessionstorage.api)
+                implementation(projects.libraries.di)
                 // Add KMP dependencies here
             }
         }
@@ -80,6 +85,8 @@ kotlin {
                 // Add Android-specific dependencies here. Note that this source set depends on
                 // commonMain by default and will correctly pull the Android artifacts of any KMP
                 // dependencies declared in commonMain.
+                implementation(libs.sqldelight.android)
+                implementation(libs.sqlcipher)
             }
         }
 
@@ -98,8 +105,24 @@ kotlin {
                 // part of KMP’s default source set hierarchy. Note that this source set depends
                 // on common by default and will correctly pull the iOS artifacts of any
                 // KMP dependencies declared in commonMain.
+                implementation(libs.sqldelight.native)
             }
         }
     }
+    /* 👇 IMPORTANT: sqldelight is TOP-LEVEL (outside kotlin { }) */
+    sqldelight {
+        databases {
+            create("ClientSessionDatabase") {
+                // must match your .sq package path
+                packageName.set("io.getsafenow.libraries.sessionstorage.impl.database")
 
+                // write the baseline .db under commonMain so you can commit it
+                schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
+
+                // use migrations as source of truth
+                //deriveSchemaFromMigrations.set(true)
+                verifyMigrations.set(true)
+            }
+        }
+    }
 }

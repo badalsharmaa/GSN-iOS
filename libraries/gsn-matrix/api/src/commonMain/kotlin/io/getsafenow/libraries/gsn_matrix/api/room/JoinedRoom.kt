@@ -1,8 +1,6 @@
 package io.getsafenow.libraries.gsn_matrix.api.room
 
 
-import io.element.android.libraries.matrix.api.room.IntentionalMention
-import io.element.android.libraries.matrix.api.room.RoomNotificationSettingsState
 import io.getsafenow.libraries.gsn_matrix.api.room.history.RoomHistoryVisibility
 import io.getsafenow.libraries.gsn_matrix.api.room.join.JoinRule
 import io.getsafenow.libraries.gsn_matrix.api.room.knock.KnockRequest
@@ -14,6 +12,10 @@ import io.getsafenow.libraries.gsn_matrix.api.core.RoomAlias
 import io.getsafenow.libraries.gsn_matrix.api.core.SendHandle
 import io.getsafenow.libraries.gsn_matrix.api.core.UserId
 import io.getsafenow.libraries.gsn_matrix.api.encryption.identity.IdentityStateChange
+import io.getsafenow.libraries.gsn_matrix.api.roomdirectory.RoomVisibility
+import io.getsafenow.libraries.gsn_matrix.api.timeline.Timeline
+import io.getsafenow.libraries.gsn_matrix.api.widget.MatrixWidgetDriver
+import io.getsafenow.libraries.gsn_matrix.api.widget.MatrixWidgetSettings
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow

@@ -3,6 +3,7 @@ package io.getsafenow.libraries.gsn_matrix.api.media
 import io.getsafenow.libraries.gsn_matrix.api.media.MediaPreviewValue.Off
 import io.getsafenow.libraries.gsn_matrix.api.media.MediaPreviewValue.On
 import io.getsafenow.libraries.gsn_matrix.api.media.MediaPreviewValue.Private
+import io.getsafenow.libraries.gsn_matrix.api.room.join.JoinRule
 
 /**
  * Represents the values for media preview settings.

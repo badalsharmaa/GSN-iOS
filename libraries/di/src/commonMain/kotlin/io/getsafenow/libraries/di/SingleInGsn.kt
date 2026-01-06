@@ -16,4 +16,5 @@ import kotlin.reflect.KClass
     level = DeprecationLevel.WARNING
 )
 @Scope
+@Retention(AnnotationRetention.RUNTIME)
 annotation class SingleInGsn(val clazz: KClass<*>)

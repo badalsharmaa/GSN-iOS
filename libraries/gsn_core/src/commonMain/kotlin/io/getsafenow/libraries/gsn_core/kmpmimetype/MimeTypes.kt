@@ -25,6 +25,8 @@ object MimeTypes {
 
     const val Ogg = "audio/ogg"
     const val Mp3 = "audio/mp3"
+    const val AudioMp4 = "audio/mp4"
+    const val M4a = "audio/m4a"
 
     const val PlainText = "text/plain"
 
@@ -43,7 +45,33 @@ object MimeTypes {
         return when (fileExtension.lowercase()) {
             "apk" -> Apk
             "pdf" -> Pdf
+            "png" -> Png
+            "jpg", "jpeg" -> Jpeg
+            "gif" -> Gif
+            "webp" -> WebP
+            "svg" -> Svg
+            "mp4" -> Mp4
+            "m4a" -> AudioMp4
+            "ogg" -> Ogg
+            "mp3" -> Mp3
             else -> OctetStream
+        }
+    }
+
+    fun toFileExtension(mimeType: String?): String {
+        return when (mimeType?.lowercase()) {
+            Apk -> "apk"
+            Pdf -> "pdf"
+            Png -> "png"
+            Jpeg, BadJpg -> "jpg"
+            Gif -> "gif"
+            WebP -> "webp"
+            Svg -> "svg"
+            Mp4 -> "mp4"
+            AudioMp4, M4a -> "m4a"
+            Ogg -> "ogg"
+            Mp3 -> "mp3"
+            else -> "bin"
         }
     }
 

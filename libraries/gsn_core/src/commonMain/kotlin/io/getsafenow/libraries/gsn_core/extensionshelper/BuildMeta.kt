@@ -1,6 +1,6 @@
 package io.getsafenow.libraries.gsn_core.extensionshelper
 
-import io.element.android.libraries.core.meta.BuildMeta
+import io.getsafenow.libraries.gsn_core.meta.BuildMeta
 import io.getsafenow.libraries.gsn_core.meta.BuildType
 
 fun BuildMeta.isGetSafeNow(): Boolean {

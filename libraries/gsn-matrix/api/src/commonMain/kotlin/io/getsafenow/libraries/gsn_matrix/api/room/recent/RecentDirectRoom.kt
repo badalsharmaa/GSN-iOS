@@ -1,11 +1,14 @@
 package io.getsafenow.libraries.gsn_matrix.api.room.recent
 
+import io.getsafenow.libraries.gsn_matrix.api.room.isDm
 import io.getsafenow.libraries.gsn_matrix.api.room.BaseRoom
 import io.getsafenow.libraries.gsn_matrix.api.room.CurrentUserMembership
 import io.getsafenow.libraries.gsn_matrix.api.GsnMClient
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
 import io.getsafenow.libraries.gsn_matrix.api.core.UserId
+import io.getsafenow.libraries.gsn_matrix.api.room.toMUser
 import io.getsafenow.libraries.gsn_matrix.api.user.GsnMUser
+import kotlinx.coroutines.flow.first
 
 
 private const val MAX_RECENT_DIRECT_ROOMS_TO_RETURN = 5
@@ -28,7 +31,7 @@ suspend fun GsnMClient.getRecentDirectRooms(
                 val otherUser = room.getMembers().getOrNull()
                     ?.firstOrNull { it.userId != sessionId }
                     ?.takeIf { foundUserIds.add(it.userId) }
-                    ?.toMatrixUser()
+                    ?.toMUser()
                 if (otherUser != null) {
                     result.add(
                         RecentDirectRoom(room.roomId, otherUser)

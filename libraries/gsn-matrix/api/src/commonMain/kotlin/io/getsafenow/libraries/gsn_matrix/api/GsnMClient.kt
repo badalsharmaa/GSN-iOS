@@ -1,8 +1,9 @@
 package io.getsafenow.libraries.gsn_matrix.api
 
 
-import io.element.android.libraries.matrix.api.room.NotJoinedRoom
-import io.element.android.libraries.matrix.api.room.RoomMembershipObserver
+import io.getsafenow.libraries.gsn_matrix.api.room.NotJoinedRoom
+import io.getsafenow.libraries.gsn_matrix.api.room.RoomMembershipObserver
+import io.getsafenow.libraries.gsn_core.gsndata.runCatchingOrNull
 import io.getsafenow.libraries.gsn_matrix.api.core.DeviceId
 import io.getsafenow.libraries.gsn_matrix.api.core.MPatternsGsn
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomAlias
@@ -24,7 +25,11 @@ import io.getsafenow.libraries.gsn_matrix.api.room.RoomInfo
 import io.getsafenow.libraries.gsn_matrix.api.room.alias.ResolvedRoomAlias
 import io.getsafenow.libraries.gsn_matrix.api.roomdirectory.RoomDirectoryService
 import io.getsafenow.libraries.gsn_matrix.api.roomlist.RoomListService
+import io.getsafenow.libraries.gsn_matrix.api.sync.SlidingSyncVersion
+import io.getsafenow.libraries.gsn_matrix.api.sync.SyncService
 import io.getsafenow.libraries.gsn_matrix.api.user.GsnMUser
+import io.getsafenow.libraries.gsn_matrix.api.user.MSearchUserResults
+import io.getsafenow.libraries.gsn_matrix.api.verification.SessionVerificationService
 import io.getsafenow.libraries.kmputils.platformkmp.KmpOptional
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -48,7 +53,7 @@ interface GsnMClient {
     suspend fun createRoom(createRoomParams: CreateRoomParameters): Result<RoomId>
     suspend fun createDM(userId: UserId): Result<RoomId>
     suspend fun getProfile(userId: UserId): Result<GsnMUser>
-    suspend fun searchUsers(searchTerm: String, limit: Long): Result<MatrixSearchUserResults>
+    suspend fun searchUsers(searchTerm: String, limit: Long): Result<MSearchUserResults>
     suspend fun setDisplayName(displayName: String): Result<Unit>
     suspend fun uploadAvatar(mimeType: String, data: ByteArray): Result<Unit>
     suspend fun removeAvatar(): Result<Unit>
@@ -175,5 +180,5 @@ fun GsnMClient.roomAliasFromName(name: String): RoomAlias? {
     return name.takeIf { it.isNotEmpty() }
         ?.let { "#$it:${userIdServerName()}" }
         ?.takeIf { MPatternsGsn.isRoomAlias(it) }
-        ?.let { tryOrNull { RoomAlias(it) } }
+        ?.let { runCatchingOrNull { RoomAlias(it) } }
 }

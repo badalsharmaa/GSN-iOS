@@ -2,13 +2,15 @@ package io.getsafenow.libraries.gsn_matrix.api.room
 
 import androidx.compose.runtime.Immutable
 
-import io.element.android.libraries.matrix.api.room.RoomNotificationMode
+import io.getsafenow.libraries.gsn_matrix.api.core.EventId
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomAlias
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
+import io.getsafenow.libraries.gsn_matrix.api.core.UserId
 import io.getsafenow.libraries.gsn_matrix.api.room.history.RoomHistoryVisibility
 import io.getsafenow.libraries.gsn_matrix.api.room.join.JoinRule
 import io.getsafenow.libraries.gsn_matrix.api.room.powerlevels.RoomPowerLevels
 import io.getsafenow.libraries.gsn_matrix.api.room.tombstone.SuccessorRoom
+import io.getsafenow.libraries.gsn_matrix.api.user.GsnMUser
 import kotlinx.collections.immutable.ImmutableList
 
 @Immutable
@@ -62,7 +64,7 @@ data class RoomInfo(
      * notification settings.
      */
     val numUnreadMentions: Long,
-    val heroes: ImmutableList<MatrixUser>,
+    val heroes: ImmutableList<GsnMUser>,
     val pinnedEventIds: ImmutableList<EventId>,
     val creators: ImmutableList<UserId>,
     val historyVisibility: RoomHistoryVisibility,

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.androidLint)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -61,12 +62,16 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
-                implementation(libs.kotlinInject.runtime)
+                implementation(libs.kotlinInject.runtime.kmp)
+                implementation(libs.bundles.kotlinInjectAnvil)
                 // Add KMP dependencies here
                 //-------------------------------------------//
                 implementation(projects.gsnServices)
+                implementation(projects.libraries.di)
                 implementation(projects.libraries.architecture)
                 implementation(projects.libraries.gsnMatrix.api)
+                implementation(projects.libraries.sessionstorage.impl)
+                implementation(projects.libraries.kmputils)
             }
         }
 
@@ -102,5 +107,19 @@ kotlin {
             }
         }
     }
+}
+dependencies {
+    // For common metadata (use the KMP-aware compiler artifact)
+    add("kspCommonMainMetadata", libs.kotlinInject.compiler)
 
+    // For each target (use the regular KSP compiler)
+    add("kspAndroid", libs.kotlinInject.compiler)
+    add("kspIosX64", libs.kotlinInject.compiler)
+    add("kspIosArm64", libs.kotlinInject.compiler)
+    add("kspIosSimulatorArm64", libs.kotlinInject.compiler)
+}
+// (Optional) Kotlin Inject / KSP args
+ksp {
+    // args if you need them later, e.g.:
+    // arg("me.tatarka.inject.generateCompanionExtensions", "true")
 }

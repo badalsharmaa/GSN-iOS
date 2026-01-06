@@ -112,4 +112,5 @@ kotlin {
 compose.resources {
     publicResClass = true
     packageOfResClass = "io.getsafenow.sharedres.generated.resources"
+    generateResClass = always
 }

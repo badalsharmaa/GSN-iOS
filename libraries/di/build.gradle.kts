@@ -62,7 +62,8 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
-                implementation(libs.kotlinInject.runtime)
+                //implementation(libs.kotlinInject.runtime)
+                implementation(libs.bundles.kotlinInjectAnvil)
                 // Add KMP dependencies here
                 //-------------------------------------------//
             }
@@ -103,6 +104,7 @@ kotlin {
     }
 }
 
+/*
 dependencies {
     add("kspAndroid", libs.kotlinInject.compiler)         // Android
     add("kspIosArm64", libs.kotlinInject.compiler)        // iOS device
@@ -111,4 +113,4 @@ dependencies {
 
     // Optional (helps IDE/common symbol resolution):
     add("kspCommonMainMetadata", libs.kotlinInject.compiler)
-}
+}*/

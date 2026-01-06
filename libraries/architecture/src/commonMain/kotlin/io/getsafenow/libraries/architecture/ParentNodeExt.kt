@@ -16,11 +16,11 @@ fun <NavTarget : Any> BaseFlowNode<NavTarget>.childFor(navTarget: NavTarget): Sc
 
 /**
  * Suspend until a child whose configuration matches [predicate] is ATTACHED
- * and return its instance typed as [N].
+ * and return its instance.
  */
-suspend inline fun <reified N : ScreenComponent, NavTarget : Any>
+suspend fun <N : ScreenComponent, NavTarget : Any>
         BaseFlowNode<NavTarget>.waitForChildAttached(
-    crossinline predicate: (NavTarget) -> Boolean
+    predicate: (NavTarget) -> Boolean
 ): N = stack.waitForChildAttached(predicate)
 
 /**
@@ -32,16 +32,19 @@ suspend fun <NavTarget : Any>
     predicate: (NavTarget) -> Boolean
 ) = stack.waitForNavTargetAttached(predicate)
 
-// ---- Helpers used by the public inline API above ----
+// ---- Helpers used by the public API above ----
 
 @PublishedApi
-internal suspend inline fun <reified N : ScreenComponent, NavTarget : Any>
+internal suspend fun <N : ScreenComponent, NavTarget : Any>
         Value<ChildStack<NavTarget, ScreenComponent>>.waitForChildAttached(
-    crossinline predicate: (NavTarget) -> Boolean
+    predicate: (NavTarget) -> Boolean
 ): N = suspendCancellableCoroutine { cont ->
     fun tryResume(stack: ChildStack<NavTarget, ScreenComponent>) {
-        val match = stack.items.lastOrNull { predicate(it.configuration) }?.instance as? N
-        if (match != null && !cont.isCompleted) cont.resume(match)
+        val match = stack.items.lastOrNull { predicate(it.configuration) }?.instance
+        if (match != null && !cont.isCompleted) {
+            @Suppress("UNCHECKED_CAST")
+            cont.resume(match as N)
+        }
     }
     tryResume(value)
     val disposable = subscribe { stack -> tryResume(stack) }

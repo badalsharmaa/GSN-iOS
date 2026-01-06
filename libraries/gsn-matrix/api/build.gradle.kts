@@ -66,11 +66,18 @@ kotlin {
                 implementation(libs.kotlinx.collections.immutable)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
                 implementation(libs.co.kermit.logger)
+                implementation(libs.squareup.okio)
+                implementation(libs.bundles.kotlinInjectAnvil)
+                implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.serialization.json)
+
                 // Add KMP dependencies here
                 implementation(projects.libraries.architecture)
                 implementation(projects.libraries.kmputils)
+                implementation(projects.libraries.gsnCore)
                 implementation(projects.libraries.di)
-
+                api(projects.libraries.sessionstorage.api)
+                implementation(projects.appconfig)
             }
         }
 

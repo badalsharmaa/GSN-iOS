@@ -1,7 +1,7 @@
 package io.getsafenow.libraries.gsn_matrix.api.timeline
 
 
-import io.element.android.libraries.matrix.api.room.IntentionalMention
+import io.getsafenow.libraries.gsn_matrix.api.room.IntentionalMention
 import io.getsafenow.libraries.gsn_matrix.api.core.EventId
 import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
 import io.getsafenow.libraries.gsn_matrix.api.core.ThreadId

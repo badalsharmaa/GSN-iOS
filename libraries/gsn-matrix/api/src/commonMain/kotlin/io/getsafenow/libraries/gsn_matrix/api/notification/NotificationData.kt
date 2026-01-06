@@ -5,6 +5,8 @@ import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
 import io.getsafenow.libraries.gsn_matrix.api.core.SessionId
 import io.getsafenow.libraries.gsn_matrix.api.core.ThreadId
 import io.getsafenow.libraries.gsn_matrix.api.core.UserId
+import io.getsafenow.libraries.gsn_matrix.api.room.RoomMembershipState
+import io.getsafenow.libraries.gsn_matrix.api.timeline.item.event.MessageType
 
 
 data class NotificationData(

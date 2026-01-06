@@ -1,20 +1,14 @@
-/*
- * Copyright 2023, 2024 New Vector Ltd.
- *
- * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
- * Please see LICENSE files in the repository root for full details.
- */
+package io.getsafenow.libraries.gsn_matrix.api.room
 
-package io.element.android.libraries.matrix.api.room
+import io.getsafenow.libraries.gsn_matrix.api.GsnMClient
+import io.getsafenow.libraries.gsn_matrix.api.core.RoomId
+import io.getsafenow.libraries.gsn_matrix.api.core.UserId
 
-import io.element.android.libraries.matrix.api.MatrixClient
-import io.element.android.libraries.matrix.api.core.RoomId
-import io.element.android.libraries.matrix.api.core.UserId
 
 /**
  * Try to find an existing DM with the given user, or create one if none exists and [createIfDmDoesNotExist] is true.
  */
-suspend fun MatrixClient.startDM(
+suspend fun GsnMClient.startDM(
     userId: UserId,
     createIfDmDoesNotExist: Boolean,
 ): StartDMResult {

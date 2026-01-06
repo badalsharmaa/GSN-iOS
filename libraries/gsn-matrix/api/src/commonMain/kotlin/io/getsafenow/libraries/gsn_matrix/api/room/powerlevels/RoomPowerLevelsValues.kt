@@ -8,8 +8,8 @@
 package io.getsafenow.libraries.gsn_matrix.api.room.powerlevels
 
 import io.getsafenow.libraries.gsn_matrix.api.room.BaseRoom
-import io.element.android.libraries.matrix.api.room.MessageEventType
-import io.element.android.libraries.matrix.api.room.StateEventType
+import io.getsafenow.libraries.gsn_matrix.api.room.MessageEventType
+import io.getsafenow.libraries.gsn_matrix.api.room.StateEventType
 import io.getsafenow.libraries.gsn_core.extensionshelper.runCatchingExceptions
 
 

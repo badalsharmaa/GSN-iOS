@@ -1,14 +1,5 @@
-/*
- * Copyright 2024 New Vector Ltd.
- *
- * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
- * Please see LICENSE files in the repository root for full details.
- */
+package io.getsafenow.libraries.gsn_matrix.api.room
 
-package io.element.android.libraries.matrix.api.room
-
-import io.getsafenow.libraries.gsn_matrix.api.room.BaseRoom
-import io.getsafenow.libraries.gsn_matrix.api.room.RoomInfo
 import kotlinx.coroutines.flow.first
 
 /**
@@ -23,11 +14,11 @@ fun isDm(isDirect: Boolean, activeMembersCount: Int): Boolean {
 }
 
 /**
- * Returns whether the [io.getsafenow.libraries.gsn_matrix.api.room.BaseRoom] is a DM, with an updated state from the latest [io.getsafenow.libraries.gsn_matrix.api.room.RoomInfo].
+ * Returns whether the [BaseRoom] is a DM, with an updated state from the latest [RoomInfo].
  */
 suspend fun BaseRoom.isDm() = roomInfoFlow.first().isDm
 
 /**
- * Returns whether the [io.getsafenow.libraries.gsn_matrix.api.room.RoomInfo] is from a DM.
+ * Returns whether the [RoomInfo] is from a DM.
  */
 val RoomInfo.isDm get() = isDm(isDirect, activeMembersCount.toInt())

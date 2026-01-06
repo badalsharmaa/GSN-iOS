@@ -30,7 +30,7 @@ import org.jetbrains.compose.resources.imageResource
 @OptIn(ExperimentalCoilApi::class)
 @Composable
 fun GsnPreview(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     showBackground: Boolean = true,
     placeholderColor: Color = if (darkTheme) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error,
     content: @Composable () -> Unit
@@ -41,7 +41,7 @@ fun GsnPreview(
     }
 
     CompositionLocalProvider(LocalAsyncImagePreviewHandler provides previewHandler) {
-        GsnTheme{
+        GsnTheme(darkTheme = darkTheme){
             if (showBackground) Surface { content() } else content()
         }
     }

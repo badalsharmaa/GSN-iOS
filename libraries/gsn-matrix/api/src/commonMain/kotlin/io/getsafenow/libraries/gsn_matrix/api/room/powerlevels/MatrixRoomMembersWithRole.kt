@@ -2,8 +2,8 @@ package io.getsafenow.libraries.gsn_matrix.api.room.powerlevels
 
 import io.getsafenow.libraries.gsn_matrix.api.room.BaseRoom
 import io.getsafenow.libraries.gsn_matrix.api.room.RoomMember
-import io.element.android.libraries.matrix.api.room.RoomMembersState
-import io.element.android.libraries.matrix.api.room.activeRoomMembers
+import io.getsafenow.libraries.gsn_matrix.api.room.RoomMembersState
+import io.getsafenow.libraries.gsn_matrix.api.room.activeRoomMembers
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.Flow
