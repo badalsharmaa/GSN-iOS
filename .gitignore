@@ -1,18 +1,88 @@
-*.iml
-.kotlin
-.gradle
-**/build/
-xcuserdata
-!src/**/build/
-local.properties
-.idea
+# General
 .DS_Store
-captures
-.externalNativeBuild
-.cxx
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Gradle
+.gradle/
+build/
+*/build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android
+local.properties
+.cxx/
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+captures/
+.externalNativeBuild/
+google-services.json
+
+# Signing configurations
+*.jks
+*.keystore
+*.p12
+*.key
+
+# Kotlin
+.kotlin/
+
+# iOS / Xcode
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.len
+*.bmode
+*.pbxuser
+*.id0
+*.swp
+*.lock
+*.ds_store
+*~
+*.swp
+*.lock
+DerivedData/
+build/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Xcode
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
-**/xcshareddata/WorkspaceSettings.xcsettings
+/*.xcworkspace
+!/*.xcworkspace/
+
+# Swift Package Manager
+.build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Local configuration
+configHelper/config.json
