@@ -3,6 +3,7 @@ package com.example.getsafenowclient.component.call
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -39,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +67,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import net.folivo.trixnity.client.MatrixClient
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -78,22 +82,72 @@ fun CallVideoLayout(
     localVideo: (@Composable () -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier = modifier.fillMaxSize().background(Color.Black)
+    ) {
+        val maxWidth = constraints.maxWidth.toFloat()
+        val maxHeight = constraints.maxHeight.toFloat()
+        
         // 1. Remote Stream (Full Screen)
         remoteVideo()
 
         // 2. Local Stream (Floating Pip)
         // Only show if we have a local stream
         if (localVideo != null) {
+            // Drag state
+            var offsetX by remember { mutableStateOf(0f) }
+            var offsetY by remember { mutableStateOf(0f) }
+
+            // Pip Dimensions (fixed for now, could be dynamic)
+            val pipWidth = 100.dp
+            val pipHeight = 160.dp
+            val pipWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { pipWidth.toPx() }
+            val pipHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { pipHeight.toPx() }
+            
+            // Initial position (Top End with padding)
+            // We use offset to move it FROM the TopStart alignment usually, or calculate absolute.
+            // Let's align TopStart and use offset for full control.
+            
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 64.dp, end = 16.dp) // Avoid top bar
-                    .width(100.dp)
-                    .height(160.dp)
+                    .offset {
+                        androidx.compose.ui.unit.IntOffset(offsetX.roundToInt(), offsetY.roundToInt())
+                    }
+                    .align(Alignment.TopEnd) // Start at TopEnd, but drag controls offset relative to it? 
+                    // Better to use TopStart alignment and initialize offset to TopRight to avoid confusion
+            ) {
+                 // Actually, aligning TopStart and initializing offset is easier for dragging calculations.
+            }
+
+            // REVISED APPROACH: Use absolute positioning relative to TopStart
+            // Calculate initial "TopRight" position
+            val initialX = maxWidth - pipWidthPx - 32f // 16dp padding approx
+            val initialY = 160f // 64dp padding approx
+            
+            var currentX by remember { mutableStateOf(initialX) }
+            var currentY by remember { mutableStateOf(initialY) }
+
+            Box(
+                modifier = Modifier
+                    .offset {
+                        androidx.compose.ui.unit.IntOffset(currentX.roundToInt(), currentY.roundToInt())
+                    }
+                    .width(pipWidth)
+                    .height(pipHeight)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
-                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            val newX = currentX + dragAmount.x
+                            val newY = currentY + dragAmount.y
+                            
+                            // Bounds Check
+                            currentX = newX.coerceIn(0f, maxWidth - pipWidthPx)
+                            currentY = newY.coerceIn(0f, maxHeight - pipHeightPx)
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 localVideo()
@@ -553,6 +607,7 @@ private fun CallStatusText(
             }
             formatDuration(durationSeconds)
         }
+        is CallState.Reconnecting -> "Reconnecting..."
         is CallState.Ended -> {
             when (s.reason) {
                 EndCallReason.LocalHangup -> "Call Ended"
@@ -561,6 +616,8 @@ private fun CallStatusText(
                 EndCallReason.Busy -> "User Busy"
                 EndCallReason.IceFailed -> "Connection Failed"
                 EndCallReason.ConnectionDropped -> "Connection Lost"
+                EndCallReason.AnsweredElsewhere -> "Answered on another device"
+                EndCallReason.Timeout -> "Call Timeout"
                 EndCallReason.Error -> "Call Error"
             }
         }
@@ -654,14 +711,106 @@ private fun CallBannerPreview() {
         )
     }
     GsnPreview {
-        CallOverlayBanner(
-            state = sampleState,
-            client = null,
-            onExpandClick = {},
-            onEndCallClick = {},
-            onAcceptClick = {},
-            onToggleMic = {},
-            onToggleSpeaker = {}
-        )
+    }
+}
+
+@Composable
+fun CallVideoOverlayBanner(
+    state: CallUiState,
+    videoContent: @Composable () -> Unit,
+    onExpandClick: () -> Unit,
+    onEndCallClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Floating PiP for Minimized Video Call
+    // We utilize BoxWithConstraints to allow dragging within bounds
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier = modifier.fillMaxSize() // Fill the screen to allow free movement within it
+    ) {
+        val maxWidth = constraints.maxWidth.toFloat()
+        val maxHeight = constraints.maxHeight.toFloat()
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        
+        // Default PiP Size
+        val width = 110.dp
+        val height = 160.dp
+        val widthPx = with(density) { width.toPx() }
+        val heightPx = with(density) { height.toPx() }
+
+        // Initial Position: Top Right (with some safe area padding)
+        val initialX = maxWidth - widthPx - 32f
+        val initialY = 160f 
+        
+        var offsetX by remember { mutableStateOf(initialX) }
+        var offsetY by remember { mutableStateOf(initialY) }
+
+        Surface(
+            modifier = Modifier
+                .offset {
+                     androidx.compose.ui.unit.IntOffset(offsetX.roundToInt(), offsetY.roundToInt())
+                }
+                .size(width, height)
+                .clip(RoundedCornerShape(12.dp))
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        val newX = offsetX + dragAmount.x
+                        val newY = offsetY + dragAmount.y
+                        offsetX = newX.coerceIn(0f, maxWidth - widthPx)
+                        offsetY = newY.coerceIn(0f, maxHeight - heightPx)
+                    }
+                }
+                .clickable(onClick = onExpandClick), // Tap to restore
+            shape = RoundedCornerShape(12.dp),
+            shadowElevation = 6.dp,
+            color = Color.Black // Video background
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                // 1. Video Content
+                videoContent()
+                
+                // 2. Overlay gradient and controls
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY
+                            )
+                        )
+                )
+
+                // 3. Controls (End Call)
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Top: Duration / Status
+                    CallStatusText(
+                        state = state,
+                        style = GsnTheme.typography.fontBodyXsRegular,
+                        color = Color.White
+                    )
+
+                    // Bottom: End Call Button
+                    IconButton(
+                        onClick = onEndCallClick,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(GsnTheme.colors.bgCriticalPrimary, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = FontAwesomeIcons.Solid.PhoneSlash,
+                            contentDescription = "End",
+                            tint = Color.White, // Always white on red
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }

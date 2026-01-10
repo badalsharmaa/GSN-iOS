@@ -31,7 +31,12 @@ suspend fun MatrixClient.getOrCreateDirectRoom(targetUserId: UserId): Result<Roo
         ?.get(targetUserId)
         ?.firstOrNull()
 
-    if (existingRoomId != null) return@runCatching existingRoomId
+    if (existingRoomId != null) {
+        // Ensure the user is actually in the room (re-invite if valid/kick/left)
+        // We blindly try to invite. If they are already joined, this typically defaults to no-op or error we can ignore.
+        api.room.inviteUser(existingRoomId, targetUserId).getOrNull()
+        return@runCatching existingRoomId
+    }
 
     // 3️⃣ Otherwise, create a new private direct room
     val newRoomId = api.room.createRoom(

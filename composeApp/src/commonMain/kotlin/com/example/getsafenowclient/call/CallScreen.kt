@@ -1,12 +1,15 @@
 package com.example.getsafenowclient.call
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.example.getsafenowclient.call.webrtc.VideoRenderer
 import com.example.getsafenowclient.component.call.CallOverlayBanner
 import com.example.getsafenowclient.component.call.CallScreen
 import com.example.getsafenowclient.component.call.CallVideoLayout
+import com.example.getsafenowclient.component.call.CallVideoOverlayBanner
 import net.folivo.trixnity.client.MatrixClient
 
 @Composable
@@ -20,17 +23,38 @@ fun CallScreen(
     val remoteStream by component.webrtc.remoteStream.collectAsState()
 
     // 1. Minimized Banner Mode
+    // 1. Minimized Banner Mode
     if (state.isMinimized) {
-        CallOverlayBanner(
-            state = state,
-            client = client,
-            onExpandClick = { component.dispatch(CallEvent.Restore) },
-            onEndCallClick = { component.dispatch(CallEvent.Hangup) },
-            onAcceptClick = { component.dispatch(CallEvent.AcceptCall) },
-            onToggleMic = { component.dispatch(CallEvent.ToggleMic) },
-            onToggleSpeaker = { component.dispatch(CallEvent.ToggleSpeaker) },
-            modifier = modifier
-        )
+        if (state.isVideoCall) {
+            CallVideoOverlayBanner(
+                state = state,
+                videoContent = {
+                    // Minimized View: Show Remote by default, fallback to Local
+                    val rStream = remoteStream
+                    val lStream = localStream
+                    
+                    if (rStream != null) {
+                        VideoRenderer(rStream, modifier = Modifier.fillMaxSize(), isMirror = false)
+                    } else if (lStream != null && state.isVideoEnabled) {
+                        VideoRenderer(lStream, modifier = Modifier.fillMaxSize(), isMirror = true)
+                    }
+                },
+                onExpandClick = { component.dispatch(CallEvent.Restore) },
+                onEndCallClick = { component.dispatch(CallEvent.Hangup) },
+                modifier = modifier
+            )
+        } else {
+            CallOverlayBanner(
+                state = state,
+                client = client,
+                onExpandClick = { component.dispatch(CallEvent.Restore) },
+                onEndCallClick = { component.dispatch(CallEvent.Hangup) },
+                onAcceptClick = { component.dispatch(CallEvent.AcceptCall) },
+                onToggleMic = { component.dispatch(CallEvent.ToggleMic) },
+                onToggleSpeaker = { component.dispatch(CallEvent.ToggleSpeaker) },
+                modifier = modifier
+            )
+        }
         return
     }
 
@@ -45,13 +69,11 @@ fun CallScreen(
         {
             CallVideoLayout(
                 remoteVideo = {
-                    // TODO: Implement actual VideoRenderer for KMP (e.g. SurfaceViewRenderer)
-                    // For now, these are placeholders or platform-specific expect/actuals
-                    // remoteStream?.let { VideoRenderer(it, isMirror = false) }
+                    remoteStream?.let { VideoRenderer(it, modifier = Modifier.fillMaxSize(), isMirror = false) }
                 },
                 localVideo = if (state.isVideoEnabled) {
                     {
-                        // localStream?.let { VideoRenderer(it, isMirror = true) }
+                        localStream?.let { VideoRenderer(it, modifier = Modifier.fillMaxSize(), isMirror = true) }
                     }
                 } else null
             )

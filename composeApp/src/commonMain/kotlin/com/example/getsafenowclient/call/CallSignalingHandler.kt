@@ -74,7 +74,18 @@ class CallSignalingHandler(
                                 if (senderId == myUserId) continue
 
                                 if (currentCallId != null && currentCallId != content.callId) {
-                                    continue
+                                    // Glare Handling: Both parties called simultaneously.
+                                    // Rule: Lexicographical comparison. If incoming CallID > my currentCallId, I yield.
+                                    // I accept the incoming call (simulate receiving it) and ditch my own logic.
+                                    if (content.callId > (currentCallId ?: "")) {
+                                        Logger.i("Call Glare Detected! Yielding to incoming call ${content.callId} (mine was $currentCallId)")
+                                        // Clear "my" call ID so we can blindly accept the new one
+                                        currentCallId = null 
+                                    } else {
+                                        // I win. I assume the other side will do the same check and yield to me.
+                                        Logger.i("Call Glare Detected! Ignoring incoming call ${content.callId} in favor of mine $currentCallId")
+                                        continue
+                                    }
                                 }
 
                                 currentCallId = content.callId
@@ -95,7 +106,15 @@ class CallSignalingHandler(
                             }
 
                             is CallEventContent.Answer -> {
-                                if (senderId == myUserId) continue
+                                if (senderId == myUserId) {
+                                    // Handle Answered Elsewhere vs. My Own Answer
+                                    // If partyId matches, it's THIS device. Ignore.
+                                    // If partyId differs, it's another login. Dispatch AnsweredElsewhere.
+                                    if (currentCallId == content.callId && content.partyId != myPartyId) { 
+                                         dispatch(CallEvent.AnsweredElsewhere(content.callId), roomId)
+                                    }
+                                    continue
+                                }
                                 if (currentCallId != content.callId) continue
 
                                 dispatch(

@@ -51,6 +51,9 @@ sealed class CallEvent {
         val reason: EndCallReason
     ) : CallEvent()
 
+    // Answered on another device
+    data class AnsweredElsewhere(val callId: String) : CallEvent()
+
 
     // -------------------------
     //  INTERNAL WEBRTC EVENTS
@@ -58,6 +61,7 @@ sealed class CallEvent {
 
     data object WebRtcConnected : CallEvent()
     data object WebRtcDisconnected : CallEvent()
+    data object ConnectionRestored : CallEvent()
 
     data class LocalCameraFailed(val error: Throwable?) : CallEvent()
     data object RemoteVideoStopped : CallEvent()

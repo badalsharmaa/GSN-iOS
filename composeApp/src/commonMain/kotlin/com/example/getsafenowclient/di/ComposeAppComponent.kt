@@ -1,6 +1,7 @@
 package com.example.getsafenowclient.di
 
 import co.touchlab.kermit.Logger
+import com.example.getsafenowclient.call.CallBackgroundManager
 import com.example.getsafenowclient.call.CallScreenModel
 import com.example.getsafenowclient.call.CallSignalingHandler
 import com.example.getsafenowclient.call.webrtc.WebRtcManager
@@ -62,6 +63,12 @@ abstract class ComposeAppComponent(
 
     @AppScope
     @Provides
+    fun provideCallBackgroundManager(contextFactory: ContextFactory): CallBackgroundManager {
+        return CallBackgroundManager(contextFactory)
+    }
+
+    @AppScope
+    @Provides
     fun provideCallSignalingHandler(
         sessionManager: SessionManager,
         webrtc: WebRtcManager,
@@ -87,17 +94,35 @@ abstract class ComposeAppComponent(
 
     @AppScope
     @Provides
+    fun provideCameraPermission(contextFactory: ContextFactory): com.example.getsafenowclient.permissions.CameraPermission {
+        return com.example.getsafenowclient.permissions.CameraPermissionImpl(contextFactory)
+    }
+
+    @AppScope
+    @Provides
+    fun provideMicrophonePermission(contextFactory: ContextFactory): com.example.getsafenowclient.permissions.MicrophonePermission {
+        return com.example.getsafenowclient.permissions.MicrophonePermissionImpl(contextFactory)
+    }
+
+    @AppScope
+    @Provides
     fun provideCallScreenModel(
         webrtc: WebRtcManager,
         signaling: CallSignalingHandler,
         scope: CoroutineScope,
-        sessionManager: SessionManager
+        sessionManager: SessionManager,
+        callBackgroundManager: CallBackgroundManager,
+        cameraPermission: com.example.getsafenowclient.permissions.CameraPermission,
+        microphonePermission: com.example.getsafenowclient.permissions.MicrophonePermission
     ): CallScreenModel {
         return CallScreenModel(
             webrtc = webrtc,
             signaling = signaling,
             scope = scope,
-            clientProvider = { sessionManager.getClient() }
+            clientProvider = { sessionManager.getClient() },
+            backgroundManager = callBackgroundManager,
+            cameraPermission = cameraPermission,
+            microphonePermission = microphonePermission
         )
     }
 }

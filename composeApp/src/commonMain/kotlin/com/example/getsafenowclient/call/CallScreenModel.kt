@@ -1,6 +1,8 @@
 package com.example.getsafenowclient.call
 
 import com.example.getsafenowclient.call.webrtc.WebRtcManager
+import com.example.getsafenowclient.permissions.CameraPermission
+import com.example.getsafenowclient.permissions.MicrophonePermission
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -22,7 +24,10 @@ class CallScreenModel(
     val webrtc: WebRtcManager,
     private val signaling: CallSignalingHandler,
     private val scope: CoroutineScope,
-    private val clientProvider: () -> MatrixClient
+    private val clientProvider: () -> MatrixClient,
+    private val backgroundManager: CallBackgroundManager,
+    private val cameraPermission: CameraPermission,
+    private val microphonePermission: MicrophonePermission
 ) {
 
     private val _state = MutableStateFlow(CallUiState())
@@ -47,6 +52,20 @@ class CallScreenModel(
     // OUTGOING CALL ENTRY POINT
     // ---------------------------------------------------------
     suspend fun startOutgoingCall(roomId: RoomId, isVideo: Boolean, opponentId: String) {
+        // PERMISSION CHECK (Caller Side)
+        if (!microphonePermission.hasPermission()) {
+            val granted = microphonePermission.requestPermission()
+            if (!granted) return // TODO: Handle denial gracefully (toast?)
+        }
+        if (isVideo && !cameraPermission.hasPermission()) {
+            val granted = cameraPermission.requestPermission()
+            if (!granted) return
+        }
+        
+        // Start background service & audio focus
+        backgroundManager.startBackgroundExecution()
+        backgroundManager.requestAudioFocus()
+
         // Resolve Peer Info immediately
         updatePeerInfo(roomId, opponentId)
 
@@ -73,6 +92,14 @@ class CallScreenModel(
                     opponentId = opponentId
                 )
             )
+        }
+        // Timeout logic
+        scope.launch {
+            delay(60_000) // 60s timeout
+            val current = _state.value.callState
+            if (current is CallState.OutgoingRinging && current.callId == newCallId) {
+                endCall(EndCallReason.Timeout)
+            }
         }
     }
 
@@ -105,7 +132,10 @@ class CallScreenModel(
 
             // ➤ WEBRTC INTERNAL EVENTS
             CallEvent.WebRtcConnected -> onWebRtcConnected(current)
-            CallEvent.WebRtcDisconnected -> endCall(EndCallReason.ConnectionDropped)
+            CallEvent.WebRtcDisconnected -> handleDisconnect(current)
+            CallEvent.ConnectionRestored -> onWebRtcConnected(current)
+            
+            is CallEvent.AnsweredElsewhere -> endCall(EndCallReason.AnsweredElsewhere)
 
             is CallEvent.LocalCameraFailed -> disableVideoFallback()
             CallEvent.LocalVideoStopped -> disableVideoFallback()
@@ -143,9 +173,20 @@ class CallScreenModel(
         endCall(EndCallReason.LocalHangup)
     }
 
-    private fun acceptIncomingCall(current: CallUiState) {
+    private suspend fun acceptIncomingCall(current: CallUiState) {
         val st = current.callState
         if (st !is CallState.IncomingRinging) return
+
+        // PERMISSION CHECK (Receiver Side)
+        // Check permissions before answering. If missing, request.
+        if (!microphonePermission.hasPermission()) {
+            val granted = microphonePermission.requestPermission()
+            if (!granted) return
+        }
+        if (current.isVideoCall && !cameraPermission.hasPermission()) {
+            val granted = cameraPermission.requestPermission()
+            if (!granted) return
+        }
 
         webrtc.ringtoneController?.stopAllTones()
 
@@ -183,6 +224,10 @@ class CallScreenModel(
         
         webrtc.ringtoneController?.startRingtone()
         updatePeerInfo(roomId, e.opponentId)
+
+        // Start background service & audio focus
+        backgroundManager.startBackgroundExecution()
+        backgroundManager.requestAudioFocus()
 
         scope.launch {
             webrtc.setupLocalStream(video = e.isVideo, audio = true)
@@ -223,20 +268,39 @@ class CallScreenModel(
         webrtc.ringtoneController?.stopAllTones()
 
         val st = current.callState
-        if (st is CallState.Connecting) {
+        if (st is CallState.Connecting || st is CallState.Reconnecting) {
+            val callId = if (st is CallState.Connecting) st.callId else (st as CallState.Reconnecting).callId
+            val opponentId = if (st is CallState.Connecting) st.opponentId else (st as CallState.Reconnecting).opponentId
+
             _state.update {
                 it.copy(
                     callState = CallState.InCall(
-                        callId = st.callId,
-                        opponentId = st.opponentId,
+                        callId = callId,
+                        opponentId = opponentId,
                         startTimestamp = Clock.System.now().toEpochMilliseconds()
                     )
                 )
             }
             // 🎤 FIX FOR iOS INITIAL MUTE:
-            // Re-assert the microphone state after connection is established.
-            // This forces the iOS audio session to properly route the microphone input.
             webrtc.setMicrophoneEnabled(current.isMicEnabled)
+        }
+    }
+    
+    private fun handleDisconnect(current: CallUiState) {
+        if (current.callState is CallState.InCall || current.callState is CallState.Connecting) {
+            // Attempt Reconnection
+            val (callId, opponentId) = when (val st = current.callState) {
+                is CallState.InCall -> st.callId to st.opponentId
+                is CallState.Connecting -> st.callId to st.opponentId
+                else -> return
+            }
+
+            _state.update {
+                it.copy(callState = CallState.Reconnecting(callId, opponentId))
+            }
+            webrtc.restartIce()
+        } else {
+            endCall(EndCallReason.ConnectionDropped)
         }
     }
 
@@ -249,6 +313,9 @@ class CallScreenModel(
         webrtc.ringtoneController?.stopAllTones()
         signaling.clearCurrentCall()
         webrtc.close()
+        
+        backgroundManager.releaseAudioFocus()
+        backgroundManager.stopBackgroundExecution()
 
         _state.update {
             val callId = when (val st = it.callState) {
@@ -256,6 +323,7 @@ class CallScreenModel(
                 is CallState.Connecting -> st.callId
                 is CallState.OutgoingRinging -> st.callId
                 is CallState.IncomingRinging -> st.callId
+                is CallState.Reconnecting -> st.callId
                 else -> null
             }
 

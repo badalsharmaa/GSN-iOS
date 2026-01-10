@@ -1,18 +1,120 @@
-*.iml
-.kotlin
-.gradle
-**/build/
-xcuserdata
-!src/**/build/
-local.properties
-.idea
+# ======================
+# General / OS
+# ======================
 .DS_Store
-captures
-.externalNativeBuild
-.cxx
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ======================
+# IntelliJ / Android Studio
+# ======================
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ======================
+# Gradle
+# ======================
+.gradle/
+build/
+*/build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ======================
+# Android
+# ======================
+local.properties
+.cxx/
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+captures/
+.externalNativeBuild/
+google-services.json
+
+# ======================
+# Signing / Secrets
+# ======================
+*.jks
+*.keystore
+*.p12
+*.key
+.env
+
+# ======================
+# Kotlin
+# ======================
+.kotlin/
+
+# ======================
+# iOS / Xcode
+# ======================
+
+# User-specific files
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Build & Derived Data
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Xcode temporary files
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.pbxuser
+*.swp
+*.lock
+*~
+
+# ======================
+# CocoaPods
+# ======================
+Pods/
+Podfile.lock
+
+# ======================
+# Xcode Project (IMPORTANT)
+# ======================
+
+# Keep the Xcode project
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
-!*.xcodeproj/project.xcworkspace/
+
+# Keep workspace
+*.xcworkspace/*
 !*.xcworkspace/contents.xcworkspacedata
-**/xcshareddata/WorkspaceSettings.xcsettings
+
+# ======================
+# Swift Package Manager
+# ======================
+.build/
+Packages/
+Package.resolved
+
+# ======================
+# Fastlane
+# ======================
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# ======================
+# Local App Configuration
+# ======================
+configHelper/config.json
