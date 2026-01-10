@@ -148,7 +148,7 @@ fun App(contextFactory: ContextFactory) {
                     CallScreen(
                         component = callModel,
                         client = client,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
                     )
                 }
             }

@@ -57,6 +57,12 @@ sealed class CallState {
         val startTimestamp: Long // Explicit timestamp required
     ) : CallState()
 
+    /** Competing / Network lost — attempting to reconnect */
+    data class Reconnecting(
+        val callId: String,
+        val opponentId: String
+    ) : CallState()
+
     /** Call ended for any reason */
     data class Ended(
         val callId: String?,
@@ -71,6 +77,8 @@ enum class EndCallReason {
     Busy,
     IceFailed,
     ConnectionDropped,
+    AnsweredElsewhere,
+    Timeout,
     Error
 }
 
