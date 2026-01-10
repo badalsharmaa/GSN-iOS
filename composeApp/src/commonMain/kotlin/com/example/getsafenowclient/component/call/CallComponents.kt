@@ -134,7 +134,7 @@ fun CallOverlayBanner(
                 .fillMaxSize()
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(11.dp)
         ) {
             // Avatar
             GsnAvatarAdvanced(
