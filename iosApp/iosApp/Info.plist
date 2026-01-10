@@ -8,5 +8,10 @@
 	<string>GetSafeNow uses the microphone so you can record and send voice and video messages.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>voip</string>
+	</array>
 </dict>
 </plist>
