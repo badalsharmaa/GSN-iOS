@@ -1,4 +1,6 @@
-# General
+# ======================
+# General / OS
+# ======================
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -6,21 +8,27 @@ Thumbs.db
 ehthumbs.db
 desktop.ini
 
-# IntelliJ IDEA
+# ======================
+# IntelliJ / Android Studio
+# ======================
 .idea/
 *.iml
 *.iws
 *.ipr
 out/
 
+# ======================
 # Gradle
+# ======================
 .gradle/
 build/
 */build/
 **/build/
 !gradle/wrapper/gradle-wrapper.jar
 
+# ======================
 # Android
+# ======================
 local.properties
 .cxx/
 *.apk
@@ -32,57 +40,82 @@ captures/
 .externalNativeBuild/
 google-services.json
 
-# Signing configurations
+# ======================
+# Signing / Secrets
+# ======================
 *.jks
 *.keystore
 *.p12
 *.key
+.env
 
+# ======================
 # Kotlin
+# ======================
 .kotlin/
 
+# ======================
 # iOS / Xcode
-*.mode1v3
-*.mode2v3
-*.perspectivev3
-*.len
-*.bmode
-*.pbxuser
-*.id0
-*.swp
-*.lock
-*.ds_store
-*~
-*.swp
-*.lock
+# ======================
+
+# User-specific files
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Build & Derived Data
 DerivedData/
 build/
 *.hmap
 *.ipa
-*.dSYM.zip
 *.dSYM
+*.dSYM.zip
 
+# Xcode temporary files
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.pbxuser
+*.swp
+*.lock
+*~
+
+# ======================
 # CocoaPods
+# ======================
 Pods/
 Podfile.lock
 
-# Xcode
+# ======================
+# Xcode Project (IMPORTANT)
+# ======================
+
+# Keep the Xcode project
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
-!*.xcodeproj/project.xcworkspace/
+
+# Keep workspace
+*.xcworkspace/*
 !*.xcworkspace/contents.xcworkspacedata
-/*.xcworkspace
-!/*.xcworkspace/
 
+# ======================
 # Swift Package Manager
+# ======================
 .build/
+Packages/
+Package.resolved
 
+# ======================
 # Fastlane
+# ======================
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
 
-# Local configuration
+# ======================
+# Local App Configuration
+# ======================
 configHelper/config.json
