@@ -131,6 +131,7 @@ class CallSignalingHandler(
                                 if (currentCallId != content.callId) continue
 
                                 content.candidates.forEach { c ->
+                                    Logger.d("Signaling → Received ICE Candidate: ${c.candidate.substringBefore(' ')}...")
                                     dispatch(
                                         CallEvent.RemoteIceCandidate(
                                             sdp = c.candidate,
@@ -209,6 +210,7 @@ class CallSignalingHandler(
         val rid = activeRoomId ?: return
         val cid = currentCallId ?: return
 
+        Logger.d("Signaling → Sending ICE Candidate: ${ice.candidate.substringBefore(' ')}...")
         client.room.sendMessage(rid) {
             content(
                 CallEventContent.Candidates(

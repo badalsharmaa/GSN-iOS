@@ -190,6 +190,9 @@ class CallScreenModel(
 
         webrtc.ringtoneController?.stopAllTones()
 
+        // Wait for hardware to init (prevent empty audio/video)
+        localStreamSetupJob?.join()
+
         webrtc.acceptCall(st.offerSdp, current.isVideoCall)
         signaling.notifyAnswerGenerated()
 
@@ -215,8 +218,27 @@ class CallScreenModel(
     private fun onIncomingInvite(e: CallEvent.IncomingInvite) {
     }
     
+    private var localStreamSetupJob: kotlinx.coroutines.Job? = null
+
     // Internal version of onIncomingInvite that accepts RoomId
     fun handleIncomingInvite(e: CallEvent.IncomingInvite, roomId: RoomId) {
+        // RENEGOTIATION CHECK:
+        // If we are already in a call with the SAME Call ID, this is a renegotiation (e.g. camera toggle).
+        // We should silently accept it instead of rejecting it as busy.
+        val currentCallId = when (val st = _state.value.callState) {
+            is CallState.InCall -> st.callId
+            is CallState.Connecting -> st.callId
+            else -> null
+        }
+
+        if (currentCallId != null && currentCallId == e.callId) {
+             co.touchlab.kermit.Logger.i("CallScreenModel → Received Renegotiation Invite (Same Call ID). Accepting silently.")
+             scope.launch {
+                 webrtc.acceptCall(e.offerSdp, e.isVideo)
+             }
+             return
+        }
+
         if (_state.value.callState !is CallState.Idle) {
             scope.launch { signaling.sendBusy(roomId, e.callId) }
             return
@@ -229,7 +251,7 @@ class CallScreenModel(
         backgroundManager.startBackgroundExecution()
         backgroundManager.requestAudioFocus()
 
-        scope.launch {
+        localStreamSetupJob = scope.launch {
             webrtc.setupLocalStream(video = e.isVideo, audio = true)
         }
 

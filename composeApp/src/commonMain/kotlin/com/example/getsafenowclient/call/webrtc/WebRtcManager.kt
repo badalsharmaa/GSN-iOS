@@ -22,6 +22,7 @@ import com.shepeliev.webrtckmp.audioTracks
 import com.shepeliev.webrtckmp.onConnectionStateChange
 import com.shepeliev.webrtckmp.onIceCandidate
 import com.shepeliev.webrtckmp.onIceConnectionStateChange
+import com.shepeliev.webrtckmp.onNegotiationNeeded
 import com.shepeliev.webrtckmp.onTrack
 import com.shepeliev.webrtckmp.videoTracks
 import kotlinx.coroutines.CoroutineScope
@@ -163,7 +164,7 @@ class WebRtcManager(
     private fun attachPeerConnectionListeners(pc: PeerConnection) {
         pc.onIceCandidate
             .onEach { ic ->
-                Logger.d("WebRTC → LOCAL ICE Generated: ${ic.candidate} | mid: ${ic.sdpMid} | index: ${ic.sdpMLineIndex}")
+                Logger.d("WebRTC → LOCAL ICE Generated: ${ic.candidate.substringBefore(' ')}... | mid: ${ic.sdpMid} | index: ${ic.sdpMLineIndex}")
                 onIceCandidate?.invoke(ic)
             }
             .launchIn(scope)
@@ -213,6 +214,7 @@ class WebRtcManager(
                     }
                     PeerConnectionState.Disconnected -> startDisconnectWatchdog()
                     PeerConnectionState.Failed -> {
+                        Logger.e("WebRTC Connection FAILED")
                         onIceFailed?.invoke()
                         startDisconnectWatchdog()
                     }
@@ -229,13 +231,47 @@ class WebRtcManager(
             .onEach { ice ->
                 Logger.d("WebRTC ICE State = $ice")
                 when (ice) {
+                    IceConnectionState.Connected, IceConnectionState.Completed -> {
+                        Logger.i("WebRTC ICE Connected! Triggering connection success fallback.")
+                        // Fallback: If ICE connects but PeerConnection stays in 'Connecting', treat as connected.
+                        // This happens on some iOS versions/network topologies.
+                        hasEverConnected = true
+                        cancelDisconnectWatchdog()
+                        onConnected?.invoke()
+                    }
                     IceConnectionState.Failed -> {
+                        Logger.e("WebRTC ICE FAILED")
                         onIceFailed?.invoke()
                         startDisconnectWatchdog()
                     }
                     IceConnectionState.Disconnected -> startDisconnectWatchdog()
-                    IceConnectionState.Connected, IceConnectionState.Completed -> cancelDisconnectWatchdog()
                     else -> Unit
+                }
+            }
+            .launchIn(scope)
+
+        pc.onNegotiationNeeded
+            .onEach {
+                // RENEGOTIATION: Triggered when tracks are added/removed
+                // We must create a new offer to update the remote peer.
+                Logger.i("WebRTC → Negotiation Needed triggered")
+                // Only the offerer (or if we are stable/connected) should kick this off typically,
+                // but since we are changing tracks locally, we initiate.
+                val connectionState = _connectionState.value
+                if (connectionState == PeerConnectionState.Connected || 
+                    connectionState == PeerConnectionState.Connecting ||
+                    connectionState == PeerConnectionState.New) { // Catch 'New' if tracks added before start
+                    
+                    try {
+                        Logger.d("WebRTC → Creating Renegotiation Offer")
+                        // Ensure we offer to receive both A/V if we handle them
+                        val options = OfferAnswerOptions(offerToReceiveAudio = true, offerToReceiveVideo = true)
+                        val offer = pc.createOffer(options)
+                        pc.setLocalDescription(offer)
+                        onSessionDescription?.invoke(offer)
+                    } catch (e: Exception) {
+                        Logger.e("Renegotiation failed: $e")
+                    }
                 }
             }
             .launchIn(scope)
@@ -253,6 +289,7 @@ class WebRtcManager(
                 val pc = peerConnection ?: return@launch
 
                 val offer = pc.createOffer(OfferAnswerOptions(offerToReceiveAudio = true, offerToReceiveVideo = isVideo))
+                Logger.d("WebRTC → Created Offer (hasVideo=$isVideo)")
                 pc.setLocalDescription(offer)
                 onSessionDescription?.invoke(offer)
             } catch (e: Exception) {
@@ -294,10 +331,12 @@ class WebRtcManager(
                 ensurePeerConnection()
                 val pc = peerConnection ?: return@launch
 
+                Logger.d("WebRTC → Setting Remote Offer...")
                 pc.setRemoteDescription(SessionDescription(SessionDescriptionType.Offer, offerSdp))
                 drainPendingCandidates()
 
                 val answer = pc.createAnswer(OfferAnswerOptions(offerToReceiveAudio = true, offerToReceiveVideo = isVideo))
+                Logger.d("WebRTC → Created Answer")
                 pc.setLocalDescription(answer)
                 onSessionDescription?.invoke(answer)
             } catch (e: Exception) {
@@ -311,8 +350,12 @@ class WebRtcManager(
         Logger.d("WebRTC → handleRemoteAnswer received")
         scope.launch {
             try {
-                if (remoteAnswerApplied) return@launch
+                if (remoteAnswerApplied) {
+                    Logger.w("WebRTC → Ignoring duplicate Answer")
+                    return@launch
+                }
                 peerConnection?.setRemoteDescription(SessionDescription(SessionDescriptionType.Answer, sdp))
+                Logger.d("WebRTC → Remote Answer Applied")
                 remoteAnswerApplied = true
                 drainPendingCandidates()
             } catch (e: Exception) {
@@ -325,6 +368,7 @@ class WebRtcManager(
         scope.launch {
             val safeMid = mid ?: "0"
             val c = IceCandidate(sdpMid = safeMid, sdpMLineIndex = index ?: 0, candidate = sdp)
+            Logger.d("WebRTC → Received Remote Candidate: ${sdp.substringBefore(' ')}... queueing.")
 
             // Robustness Fix:
             // ALWAYS add to the queue first. Then try to drain immediately.
@@ -345,20 +389,22 @@ class WebRtcManager(
         // Critical Check: Can we actually add candidates yet?
         // WebRTC requires setRemoteDescription to be called first.
         if (pc.remoteDescription == null) {
-            Logger.d("WebRTC → Cannot drain ICE yet: RemoteDescription is null")
+            Logger.d("WebRTC → Cannot drain ICE yet: RemoteDescription is null. Queue size: ${pendingIceCandidates.size}")
             return
         }
 
-        Logger.d("WebRTC → Draining ${pendingIceCandidates.size} pending ICE candidates")
-        val iter = pendingIceCandidates.iterator()
-        while (iter.hasNext()) {
-            val c = iter.next()
-            try {
-                pc.addIceCandidate(c)
-                iter.remove()
-                Logger.v("WebRTC → Added ICE Candidate: ${c.candidate.take(20)}...")
-            } catch (e: Exception) {
-                Logger.e("Failed to apply stashed ICE candidate: $e")
+        if (pendingIceCandidates.isNotEmpty()) {
+            Logger.d("WebRTC → Draining ${pendingIceCandidates.size} pending ICE candidates")
+            val iter = pendingIceCandidates.iterator()
+            while (iter.hasNext()) {
+                val c = iter.next()
+                try {
+                    pc.addIceCandidate(c)
+                    iter.remove()
+                    Logger.v("WebRTC → Added ICE Candidate: ${c.candidate.substringBefore(' ')}...")
+                } catch (e: Exception) {
+                    Logger.e("Failed to apply stashed ICE candidate: $e")
+                }
             }
         }
     }
@@ -416,16 +462,28 @@ class WebRtcManager(
                             
                             Logger.d("WebRTC → Adding new video track")
                             pc.addTrack(newVideoTrack, currentStream ?: videoStream)
+                            // Manual renegotiation removed in favor of onNegotiationNeeded listener
                         }
                     }
                 } else {
                     Logger.d("WebRTC → Disabling Camera (Stopping tracks)")
-                    // 1. Stop all video tracks to release camera hardware
+                    // 1. Stop all video tracks to release hardware
                      _localStream.value?.videoTracks?.forEach { 
                          it.enabled = false
                          it.stop() 
                      }
-                     onLocalVideoStopped?.invoke()
+                     
+                    // 2. Remove track from PeerConnection to trigger renegotiation (and stop transmission)
+                    // This ensures the remote side receives a new SDP (m=video 0) and doesn't see a frozen frame.
+                    val pc = peerConnection
+                    if (pc != null) {
+                        val senders = pc.getSenders()
+                        val videoSender = senders.find { it.track?.kind == MediaStreamTrackKind.Video }
+                        if (videoSender != null) {
+                             Logger.d("WebRTC → Removing Video Sender to enforce privacy")
+                             pc.removeTrack(videoSender)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Logger.e("setCameraEnabled failed: $e")
