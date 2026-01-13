@@ -1,0 +1,26 @@
+package io.getsafenow.confighelper
+
+
+import io.getsafenow.libraries.kmputils.platformkmp.ColorInt
+import io.getsafenow.libraries.kmputils.platformkmp.ColorUtils
+
+
+object NotificationConfig {
+    /**
+     * If set to true, the notification will have a "Mark as read" action.
+     */
+    const val SHOW_MARK_AS_READ_ACTION = true
+
+    /**
+     * If set to true, the notification for invitation will have two actions to accept or decline the invite.
+     */
+    const val SHOW_ACCEPT_AND_DECLINE_INVITE_ACTIONS = true
+
+    /**
+     * If set to true, the notification will have a "Quick reply" action, allow to compose and send a message to the room.
+     */
+    const val SHOW_QUICK_REPLY_ACTION = true
+
+
+    val NOTIFICATION_ACCENT_COLOR: ColorInt = ColorUtils.parse("#90D5FF")
+}
