@@ -10,6 +10,7 @@ import io.getsafenow.libraries.kmputils.platformkmp.ContextFactory
 import io.getsafenow.libraries.kmputils.platformkmp.PlatformFile
 import kotlinx.coroutines.flow.StateFlow
 import net.folivo.trixnity.core.model.events.m.room.RoomMessageEventContent
+import net.folivo.trixnity.client.store.UserPresence
 
 // -------------------------------------------------------------
 // Public API for Room ViewModel
@@ -28,6 +29,12 @@ interface ChatTimeline : ScreenComponent {
     // Voice Recorder State
     val voiceRecorderState: StateFlow<VoiceRecorderUiState>
 
+    // Typing Indicators
+    val usersTyping: StateFlow<List<String>>
+    
+    // Presence
+    val otherMemberPresence: StateFlow<UserPresence?>
+
     // Video Player State
     val playingVideoUrl: StateFlow<String?>
     
@@ -37,6 +44,7 @@ interface ChatTimeline : ScreenComponent {
     suspend fun loadBefore()
     suspend fun loadAfter()
     suspend fun sendMessage(text: String)
+    suspend fun retryMessage(transactionId: String)
     suspend fun sendVideoMessage(file: PlatformFile, duration: Long, thumbnail: PlatformFile?)
 
     // Voice Recorder Events

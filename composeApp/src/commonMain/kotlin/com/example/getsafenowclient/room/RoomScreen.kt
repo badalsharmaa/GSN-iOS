@@ -3,6 +3,7 @@ package com.example.getsafenowclient.room
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -70,19 +71,14 @@ fun RoomScreen(
     val isInitialLoadComplete by component.isInitialLoadComplete.collectAsState()
     val voiceRecorderState by component.voiceRecorderState.collectAsState()
     val playingVideoUrl by component.playingVideoUrl.collectAsState()
+    val typingUsers by component.usersTyping.collectAsState()
+    val otherMemberPresence by component.otherMemberPresence.collectAsState()
     
-    // Distance from bottom in pixels (core fix)
-    var distanceFromBottomPx by remember { mutableStateOf(0) }
 
-    // Whether user is close enough to bottom to auto-scroll
-    val isNearBottom by remember {
-        derivedStateOf { distanceFromBottomPx < 48 } // ~1 message height
-    }
 
     var pendingPrepend by remember { mutableStateOf(false) }
     var anchorItemIndex by remember { mutableStateOf(0) }
     var anchorItemOffset by remember { mutableStateOf(0) }
-
 
     val roomState by client.room.getById(roomId).collectAsState(null)
 
@@ -124,49 +120,53 @@ fun RoomScreen(
             val total = layoutInfo.totalItemsCount
             lastVisible to total
         }.collect { (lastVisible, total) ->
-            shouldStickToBottom = if (total == 0) {
-                true
-            } else {
-                // "Near bottom" = last visible item is within last 2 items
-                lastVisible >= total - 2
-            }
+            // "Near bottom" = last visible item is within last 2 items
+            // If list is empty (total=0), we are effectively at bottom.
+            shouldStickToBottom = (total == 0) || (lastVisible >= total - 2)
         }
     }
 
     // -------------------------------------------------------
-    // Initial scroll-to-bottom + keep-at-bottom-on-new-messages
+    // Scroll Logic (Initial + New Messages)
     // -------------------------------------------------------
-    LaunchedEffect(isInitialLoadComplete, items.size) {
+    // 1. Initial Scroll
+    LaunchedEffect(isInitialLoadComplete, items.isNotEmpty()) {
+        if (isInitialLoadComplete && items.isNotEmpty() && !hasPerformedInitialScroll) {
+            listState.scrollToItem(items.lastIndex)
+            hasPerformedInitialScroll = true
+        }
+    }
+
+    // 2. Auto-scroll on new items
+    LaunchedEffect(items) {
         if (!isInitialLoadComplete || items.isEmpty()) return@LaunchedEffect
 
-        val lastIndex = items.lastIndex
-
-        if (!hasPerformedInitialScroll) {
-            listState.scrollToItem(lastIndex)
-            hasPerformedInitialScroll = true
-        } else if (shouldStickToBottom) {
-            listState.animateScrollToItem(lastIndex)
-        }
-    }
-
-    LaunchedEffect(items) {
         val layout = listState.layoutInfo
         val totalItems = layout.totalItemsCount
         if (totalItems == 0) return@LaunchedEffect
 
         if (pendingPrepend) {
-            // Restore scroll relative to previously visible item (pagination case)
+            // Restore scroll position after loading older messages (pagination)
             listState.scrollToItem(
                 index = anchorItemIndex,
                 scrollOffset = anchorItemOffset
             )
             pendingPrepend = false
-        } else if (!isNearBottom) {
-            // Normal structural changes (call bubbles etc.)
-            listState.scrollToItem(
-                index = totalItems - 1,
-                scrollOffset = -distanceFromBottomPx
-            )
+        } else {
+            // Check if the latest message is "mine" (Outbox logic)
+            val lastItem = items.lastOrNull()
+            // We use a safe cast check here; adjust if MessageItem/OutboxItem structure differs
+            // Assuming OutboxItem is for local messages.
+            val isMyMessage = lastItem is OutboxItem ||
+                    (lastItem is MessageItem && lastItem.senderId == client.userId)
+
+            // Auto-scroll if we were already at the bottom OR if it's my own message
+            if (shouldStickToBottom || isMyMessage) {
+                // Use animate for smooth feel, or snap for instant?
+                // Using animate for generic updates, but snap if it's way off might be better.
+                // For now, animate is good UX.
+                listState.animateScrollToItem(items.lastIndex)
+            }
         }
     }
 
@@ -210,55 +210,85 @@ fun RoomScreen(
     Scaffold(
         modifier = modifier.fillMaxSize().imePadding(),
         topBar = {
+            // Presence Status Calculation
+            val statusText = if (otherMemberPresence?.isCurrentlyActive == true) {
+                "Online"
+            } else {
+                // Fallback or Last Seen could be added here
+                "Active now" // Keep default for now or use "Offline"
+            }
+
             RoomHeader(
                 client = client,
                 roomId = roomId.full,
                 roomName = roomName,
                 roomAvatarUrl = roomState?.avatarUrl,
-                roomStatus = "Active now",
+                roomStatus = statusText,
                 onBackClick = { onBack?.invoke() },
                 onStarClick = {}
             )
         },
         bottomBar = {
-            MessageInput(
-                value = messageText,
-                onValueChange = { messageText = it },
-                onSendClick = {
-                    if (messageText.isBlank()) return@MessageInput
-                    val toSend = messageText
-                    messageText = ""
-                    scope.launch {
-                        component.sendMessage(toSend)
+            Column(
+                modifier = Modifier.fillMaxWidth().background(Color.Transparent)
+            ) {
+                // Typing Indicator
+                if (typingUsers.isNotEmpty()) {
+                    val text = if (typingUsers.size == 1) {
+                        "${typingUsers.first()} is typing..."
+                    } else {
+                        "${typingUsers.joinToString(", ")} are typing..."
                     }
-                },
-                onStartRecording = {
-                    component.onVoiceMessageEvent(VoiceMessageEvent.StartRecording)
-                },
-                onStartVideoRecording = {
-                    showVideoRecorder = true
-                },
-                onSendImage = { /* TODO: Implement Image Picker */ },
-                onSendFile = { /* TODO: Implement File Picker */ },
-                // 📞 WIRED UP CALL ACTIONS WITH PERMISSIONS
-                onStartVoiceCall = {
-                    scope.launch {
-                        if (component.microphonePermission.requestPermission()) {
-                            component.callModel.startOutgoingCall(roomId, isVideo = false, opponentId = heroId?.full ?: "")
+                    
+                    androidx.compose.material3.Text(
+                        text = text,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .align(Alignment.Start)
+                    )
+                }
+
+                MessageInput(
+                    value = messageText,
+                    onValueChange = { messageText = it },
+                    onSendClick = {
+                        if (messageText.isBlank()) return@MessageInput
+                        val toSend = messageText
+                        messageText = ""
+                        scope.launch {
+                            component.sendMessage(toSend)
                         }
-                    }
-                },
-                onStartVideoCall = {
-                    scope.launch {
-                        if (component.cameraPermission.requestPermission() &&
-                            component.microphonePermission.requestPermission()
-                        ) {
-                            component.callModel.startOutgoingCall(roomId, isVideo = true, opponentId = heroId?.full ?: "")
+                    },
+                    onStartRecording = {
+                        component.onVoiceMessageEvent(VoiceMessageEvent.StartRecording)
+                    },
+                    onStartVideoRecording = {
+                        showVideoRecorder = true
+                    },
+                    onSendImage = { /* TODO: Implement Image Picker */ },
+                    onSendFile = { /* TODO: Implement File Picker */ },
+                    // 📞 WIRED UP CALL ACTIONS WITH PERMISSIONS
+                    onStartVoiceCall = {
+                        scope.launch {
+                            if (component.microphonePermission.requestPermission()) {
+                                component.callModel.startOutgoingCall(roomId, isVideo = false, opponentId = heroId?.full ?: "")
+                            }
                         }
-                    }
-                },
-                onAddPeople = { /* TODO: Implement Add Member logic */ }
-            )
+                    },
+                    onStartVideoCall = {
+                        scope.launch {
+                            if (component.cameraPermission.requestPermission() &&
+                                component.microphonePermission.requestPermission()
+                            ) {
+                                component.callModel.startOutgoingCall(roomId, isVideo = true, opponentId = heroId?.full ?: "")
+                            }
+                        }
+                    },
+                    onAddPeople = { /* TODO: Implement Add Member logic */ }
+                )
+            }
         }
     ) { paddingValues ->
         Box(

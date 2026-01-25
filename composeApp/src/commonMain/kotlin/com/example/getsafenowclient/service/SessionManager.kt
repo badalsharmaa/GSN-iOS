@@ -32,11 +32,18 @@ import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
 @AppScope
 class SessionManager @Inject constructor(
     private val settings: Settings,
     private val logger: Logger
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     private var client: MatrixClient? = null
     var deviceId by settings.nullableString("DEVICE_ID")
 
@@ -66,6 +73,7 @@ class SessionManager @Inject constructor(
             startSync() // ensure sync restarts
             client?.initialSyncDone?.first { it }
             getTurnServerCached()
+            warmUpAfterSync(client!!)
             true
         } else {
             logger.i("No stored session found")
@@ -100,6 +108,7 @@ class SessionManager @Inject constructor(
         startSync()
         waitForInitialSync()
         getTurnServerCached()
+        warmUpAfterSync(client!!)
         // ✅ Set username as default display name (Element-like behavior)
         /*        try {
                     val currentName = client?.displayName?.value
@@ -235,11 +244,13 @@ class SessionManager @Inject constructor(
                 logger.i("🎉 Registration finalized for $username")
                 true
             }
+
             is UIA.Step -> {
                 logger.w("⚠️ Still pending verification.")
                 pendingUIA = result
                 false
             }
+
             is UIA.Error<*> -> {
                 logger.e { "❌ Finalization error: ${result.errorResponse}" }
                 false
@@ -252,34 +263,36 @@ class SessionManager @Inject constructor(
         completeLoginAfterRegister(baseUrl, username, password)
     }
 
-    suspend fun completeLoginAfterRegister(baseUrl: Url, username: String, password: String) = safeAuthCall {
-        val result = MatrixClient.loginWithPassword(
-            baseUrl = baseUrl,
-            identifier = IdentifierType.User(username),
-            password = password,
-            repositoriesModule = createRepositoriesModule(),
-            mediaStoreModule = createMediaStoreModule(),
-        ).getOrThrow()
+    suspend fun completeLoginAfterRegister(baseUrl: Url, username: String, password: String) =
+        safeAuthCall {
+            val result = MatrixClient.loginWithPassword(
+                baseUrl = baseUrl,
+                identifier = IdentifierType.User(username),
+                password = password,
+                repositoriesModule = createRepositoriesModule(),
+                mediaStoreModule = createMediaStoreModule(),
+            ).getOrThrow()
 
-        client = result
-        deviceId = result.deviceId
-        startSync()
-        waitForInitialSync()
-        getTurnServerCached()
+            client = result
+            deviceId = result.deviceId
+            startSync()
+            waitForInitialSync()
+            getTurnServerCached()
+            warmUpAfterSync(client!!)
 
-        // ✅ Set username as default display name (Element-like behavior)
-        try {
-            val currentName = client?.displayName?.value
-            if (currentName.isNullOrBlank()) {
-                client?.setDisplayName(username)?.getOrThrow()
-                logger.i("🪪 Default display name set to '$username' for ${client!!.userId}")
-            } else {
-                logger.i("ℹ️ Display name already set to '$currentName'")
+            // ✅ Set username as default display name (Element-like behavior)
+            try {
+                val currentName = client?.displayName?.value
+                if (currentName.isNullOrBlank()) {
+                    client?.setDisplayName(username)?.getOrThrow()
+                    logger.i("🪪 Default display name set to '$username' for ${client!!.userId}")
+                } else {
+                    logger.i("ℹ️ Display name already set to '$currentName'")
+                }
+            } catch (e: Exception) {
+                logger.w("⚠️ Could not set display name for ${client!!.userId}: ${e.message}")
             }
-        } catch (e: Exception) {
-            logger.w("⚠️ Could not set display name for ${client!!.userId}: ${e.message}")
         }
-    }
 
     /*    suspend fun <T> safeAuthCall(action: suspend () -> T): T {
             return try {
@@ -292,40 +305,44 @@ class SessionManager @Inject constructor(
             }
         }*/
 
-    /*
-        suspend fun warmUpAfterSync(client: MatrixClient) {
-            val roomService = client.room
+        fun warmUpAfterSync(client: MatrixClient) {
+            scope.launch(Dispatchers.Default) {
+                runCatching {
+                    val roomService = client.room
 
-            // 1) Wait until RoomStore has emitted rooms
-            val rooms = roomService.getAll()
-                .first()
-                .values.mapNotNull { it.firstOrNull() }
+                    // 1) Wait until RoomStore has emitted rooms
+                    val rooms = roomService.getAll()
+                        .first()
+                        .values.mapNotNull { it.firstOrNull() }
 
-            // 2) Ensure members are loaded
-            rooms.forEach { room ->
-                if (!room.membersLoaded) {
-                    client.user.loadMembers(room.roomId, wait = false)
+                    // 2) Ensure members are loaded
+                    rooms.forEach { room ->
+                        if (!room.membersLoaded) {
+                            client.user.loadMembers(room.roomId, wait = false)
+                        }
+                    }
+
+                    // 3) Ensure each room has lastEventId so timeline works
+                    rooms.forEach { room ->
+                        if (room.lastEventId != null) {
+                            // Touch timeline so it initializes its cache
+                            client.room.getTimeline(room.roomId) { it.first() }.init(
+                                room.roomId,
+                                room.lastEventId!!,
+                                configBefore = { maxSize = 30 }
+                            )
+                        }
+                    }
+
+                    // 4) Do one explicit syncOnce to fill remaining gaps
+                    client.syncOnce(timeout = 0.seconds)
+                }.onFailure {
+                    logger.e(it) { "WarmUp failed" }
                 }
+                warmUpComplete.value = true
             }
-
-            // 3) Ensure each room has lastEventId so timeline works
-            rooms.forEach { room ->
-                if (room.lastEventId != null) {
-                    // Touch timeline so it initializes its cache
-                    client.room.getTimeline { it.first() }.init(
-                        room.roomId,
-                        room.lastEventId!!,
-                        configBefore = { maxSize = 30 }
-                    )
-                }
-            }
-
-            // 4) Do one explicit syncOnce to fill remaining gaps
-            client.syncOnce(timeout = 0.seconds)
-
-            warmUpComplete.value = true
         }
-    */
+
     @OptIn(ExperimentalTime::class)
     suspend fun getTurnServerCached(): TurnServerInfo {
         val now = Clock.System.now().toEpochMilliseconds()
@@ -371,6 +388,5 @@ class SessionManager @Inject constructor(
     }
 
 
-
-
 }
+

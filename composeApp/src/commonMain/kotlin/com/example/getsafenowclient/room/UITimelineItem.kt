@@ -18,6 +18,7 @@ import com.example.getsafenowclient.component.VoiceCallBubble
 import com.example.getsafenowclient.component.chat.VideoMessageBubble
 import com.example.getsafenowclient.component.chat.VoiceMessageBubble
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import net.folivo.trixnity.client.MatrixClient
 import net.folivo.trixnity.client.store.RoomUser
 import net.folivo.trixnity.client.store.TimelineEvent
@@ -260,6 +261,8 @@ data class OutboxItem(
         isFirstInBlock: Boolean,
         isLastInBlock: Boolean
     ) {
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        
         if (content is RoomMessageEventContent.FileBased.Audio) {
             val durationMs = content.info?.duration?.toLong() ?: 0L
 
@@ -276,7 +279,9 @@ data class OutboxItem(
                 horizontalArrangement = Arrangement.End
             ) {
                 VoiceMessageBubble(
-                    modifier = Modifier,
+                    modifier = Modifier.clickable(enabled = isError) {
+                         scope.launch { component.retryMessage(id) }
+                    },
                     durationMs = durationMs,
                     currentPositionMs = currentPositionMs,
                     isPlaying = isPlaying,
@@ -298,7 +303,9 @@ data class OutboxItem(
 
             if (thumbMxcUrl != null) {
                 VideoMessageBubble(
-                    modifier = modifier,
+                    modifier = modifier.clickable(enabled = isError) {
+                         scope.launch { component.retryMessage(id) }
+                    },
                     isMine = isMine,
                     duration = durationStr,
                     timestamp = timestamp,
@@ -314,7 +321,9 @@ data class OutboxItem(
                 )
             } else {
                 VideoMessageBubble(
-                    modifier = modifier,
+                    modifier = modifier.clickable(enabled = isError) {
+                         scope.launch { component.retryMessage(id) }
+                    },
                     isMine = isMine,
                     duration = durationStr,
                     timestamp = timestamp,
@@ -330,7 +339,9 @@ data class OutboxItem(
                 isMine = true,
                 isSending = !isSent && !isError,
                 isError = isError,
-                modifier = modifier
+                modifier = modifier.clickable(enabled = isError) {
+                     scope.launch { component.retryMessage(id) }
+                }
             )
         }
     }

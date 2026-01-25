@@ -43,8 +43,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -56,11 +57,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import net.folivo.trixnity.client.MatrixClient
+import net.folivo.trixnity.core.model.events.m.TypingEventContent
 import net.folivo.trixnity.client.media
 import net.folivo.trixnity.client.room
 import net.folivo.trixnity.client.store.RoomOutboxMessage
 import net.folivo.trixnity.client.store.RoomUser
 import net.folivo.trixnity.client.store.TimelineEvent
+import net.folivo.trixnity.client.store.UserPresence
 import net.folivo.trixnity.client.store.eventId
 import net.folivo.trixnity.client.user
 import net.folivo.trixnity.core.model.RoomId
@@ -244,13 +247,71 @@ class RoomComponentImpl(
     // ---------------------------------------------------------
     // Send Message
     // ---------------------------------------------------------
+
     override suspend fun sendMessage(text: String) {
         scope.launch {
+            // We use the contentSender just for "success" callback if needed, 
+            // but Trixnity handles the actual queueing via client.room.sendMessage
             contentSender.sendMessage(roomId, text) {
                 loadAfter()
             }
         }
     }
+
+    override suspend fun retryMessage(transactionId: String) {
+        scope.launch {
+            logger.d { "Retrying message $transactionId" }
+            client.room.retrySendMessage(roomId, transactionId)
+        }
+    }
+
+
+
+    // ---------------------------------------------------------
+    // Typing Indicators
+    // ---------------------------------------------------------
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override val usersTyping: StateFlow<List<String>> =
+        client.room.usersTyping
+            .map { typingMap ->
+                // Fix: property is 'users' (Set<UserId>)
+                typingMap[roomId]?.users.orEmpty()
+            }
+            .distinctUntilChanged()
+            .flatMapLatest { userIds ->
+                if (userIds.isEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    // Filter out self
+                    val others = userIds.filter { it != client.userId }
+                    if (others.isEmpty()) flowOf(emptyList())
+                    else {
+                        val nameFlows = others.map { userId ->
+                            client.user.getById(roomId, userId)
+                                .map { roomUser -> 
+                                    // RoomUser has 'name' but not 'displayName'
+                                    roomUser?.name ?: userId.full 
+                                }
+                        }
+                        combine(nameFlows) { names -> names.toList() }
+                    }
+                }
+            }
+            .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ---------------------------------------------------------
+    // User Presence
+    // ---------------------------------------------------------
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override val otherMemberPresence: StateFlow<UserPresence?> =
+        client.room.getById(roomId)
+            .map { it?.name?.heroes?.firstOrNull() } // Get the Other User ID (DM)
+            .distinctUntilChanged()
+            .flatMapLatest { userId ->
+                if (userId == null) flowOf(null)
+                else client.user.getPresence(userId)
+            }
+            .stateIn(scope, SharingStarted.WhileSubscribed(5000), null)
 
     // ---------------------------------------------------------
     // Video Message Handling
