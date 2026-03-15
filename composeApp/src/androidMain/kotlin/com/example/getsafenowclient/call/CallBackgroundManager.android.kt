@@ -11,8 +11,8 @@ actual class CallBackgroundManager actual constructor(
     private val context = contextFactory.getContext() as Context
     private val audioFocusManager = AudioFocusManager(context)
 
-    actual fun startBackgroundExecution() {
-        CallForegroundService.start(context)
+    actual fun startBackgroundExecution(isIncoming: Boolean, callerName: String?) {
+        CallForegroundService.start(context, isIncoming, callerName)
     }
 
     actual fun stopBackgroundExecution() {
@@ -26,4 +26,7 @@ actual class CallBackgroundManager actual constructor(
     actual fun releaseAudioFocus() {
         audioFocusManager.abandonAudioFocus()
     }
+
+    actual var onAnswer: (() -> Unit)? = null
+    actual var onHangup: (() -> Unit)? = null
 }

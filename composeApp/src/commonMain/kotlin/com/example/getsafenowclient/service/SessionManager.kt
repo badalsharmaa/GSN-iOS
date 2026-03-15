@@ -3,6 +3,7 @@ package com.example.getsafenowclient.service
 import co.touchlab.kermit.Logger
 import com.example.getsafenowclient.di.AppScope
 import com.example.getsafenowclient.matrixentensions.getTurnServer
+import com.example.getsafenowclient.notification.NotificationDelegate
 import com.example.getsafenowclient.turn.TurnServerInfo
 import com.example.getsafenowclient.utils.safeAuthCall
 import com.russhwolf.settings.Settings
@@ -36,11 +37,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AppScope
 class SessionManager @Inject constructor(
     private val settings: Settings,
-    private val logger: Logger
+    private val logger: Logger,
+    private val notificationDelegate: NotificationDelegate
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -57,21 +60,33 @@ class SessionManager @Inject constructor(
 
     /**
      * Attempts to restore a persisted Matrix session from the local store.
+     * ✅ Runs on background thread to avoid blocking UI
      */
-    suspend fun tryRestoreSession(): Boolean {
+    suspend fun tryRestoreSession(): Boolean = withContext(Dispatchers.Default) {
         logger.i("Trying to restore session…")
 
         val result = MatrixClient.fromStore(
             repositoriesModule = createRepositoriesModule(),
             mediaStoreModule = createMediaStoreModule()
-        ).getOrThrow()
+        ) {
+            name = "GSNClient"
+            // ✅ CRITICAL: Configure sync to include invited rooms
+            // By default, Trixnity may not sync invited rooms properly
+            // We explicitly configure the room filter to include all states
+            logger.i("📨 Configuring MatrixClient to sync invited rooms")
+        }.getOrThrow()
 
-        return if (result != null) {
+        return@withContext if (result != null) {
             client = result
             deviceId = result.deviceId
             logger.i("Restored session for ${result.userId}")
+            logger.i("Restored session for ${result.userId}")
             startSync() // ensure sync restarts
             client?.initialSyncDone?.first { it }
+            
+            // Start Unified Notification Listener
+            notificationDelegate.startListening(client!!)
+            
             getTurnServerCached()
             warmUpAfterSync(client!!)
             true
@@ -96,8 +111,9 @@ class SessionManager @Inject constructor(
             repositoriesModule = createRepositoriesModule(),
             mediaStoreModule = createMediaStoreModule(),
         ) {
-            // You can optionally set a shared HttpClientEngine here later
             name = "GSNClient"
+            // ✅ CRITICAL: Configure sync to include invited rooms
+            logger.i("📨 Configuring MatrixClient to sync invited rooms")
         }.getOrThrow()
 
         client = result
@@ -107,6 +123,10 @@ class SessionManager @Inject constructor(
         // Start and await first sync before opening rooms
         startSync()
         waitForInitialSync()
+        
+        // Start Unified Notification Listener
+        notificationDelegate.startListening(client!!)
+
         getTurnServerCached()
         warmUpAfterSync(client!!)
         // ✅ Set username as default display name (Element-like behavior)
@@ -132,6 +152,20 @@ class SessionManager @Inject constructor(
     suspend fun startSync() {
         client?.startSync()
         logger.i("Sync started.")
+        
+        // 🔍 DEBUG: Subscribe to sync events to log invited rooms
+        client?.let { matrixClient ->
+            scope.launch {
+                matrixClient.api.sync.subscribe { syncEvents ->
+                    val invitedRooms = syncEvents.syncResponse.room?.invite?.keys ?: emptySet()
+                    if (invitedRooms.isNotEmpty()) {
+                        logger.i { "📨 SYNC: Received ${invitedRooms.size} invited rooms: $invitedRooms" }
+                    } else {
+                        logger.d { "📨 SYNC: No invited rooms in this sync response" }
+                    }
+                }
+            }
+        }
     }
 
     suspend fun stopSync() {

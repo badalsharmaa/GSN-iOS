@@ -40,7 +40,6 @@ object MessageEventFormatter {
             is Unknown ->
                 "[${content.type}]"
 
-            else -> "[unknown]"
         }
     }
 
@@ -72,7 +71,6 @@ object MessageEventFormatter {
             // UNKNOWN
             is RoomMessageEventContent.Unknown -> "[${content.type}]"
 
-            else -> "[unknown]"
         }
     }
 }

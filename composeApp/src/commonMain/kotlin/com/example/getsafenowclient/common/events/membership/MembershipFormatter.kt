@@ -29,7 +29,6 @@ object MembershipFormatter {
             Membership.INVITE -> "$senderFriendly invited $targetFriendly"
             Membership.BAN -> "$senderFriendly removed $targetFriendly"
             Membership.KNOCK -> "$targetFriendly requested to join the chat."
-            else -> "$targetFriendly updated membership"
         }
     }
 }

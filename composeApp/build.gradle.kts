@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
+    alias (libs.plugins.googleServices)
 
     // ✅ REQUIRED for cocoapods {}
     kotlin("native.cocoapods")
@@ -68,6 +69,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.bundles.camerax)
             implementation(libs.bundles.media3)
+            implementation(libs.firebase.messaging)
           //  implementation("net.folivo:trixnity-client-repository-realm:4.11.2")
         }
 
@@ -75,7 +77,7 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
-            implementation(libs.material3.expressive)
+           // implementation(libs.material3.expressive)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
@@ -108,6 +110,8 @@ kotlin {
             implementation(libs.sqlite.driver.bundled)
 
             implementation(libs.icons.fontawesome)
+            implementation(libs.androidx.datastore)
+            implementation(libs.androidx.datastore.preferences)
 
             // WebRTC KMP
             implementation(libs.webrtc.kmp)
@@ -160,7 +164,8 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 

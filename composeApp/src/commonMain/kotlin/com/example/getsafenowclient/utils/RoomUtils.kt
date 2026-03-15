@@ -65,7 +65,7 @@ fun Room.nameFlow(client: MatrixClient): Flow<String> {
     val fullName = displayName.explicitName
 
     fun nameFromHeroes(roomUser: RoomUser?, heroes: List<UserId>, index: Int): String =
-        roomUser?.name ?: heroes[index].full
+        getUserDisplayName(roomUser, heroes[index])
 
     return when {
         !fullName.isNullOrEmpty() -> flowOf(fullName)
@@ -92,3 +92,20 @@ fun RoomId.nameFlow(client: MatrixClient): Flow<String> = flow {
     )
 }
 
+// ---------------------------------------------------------------------------
+// User name helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves a user's display name with consistent fallback logic.
+ * Falls back to userId.full if RoomUser is null or has no name.
+ */
+fun getUserDisplayName(roomUser: RoomUser?, userId: UserId): String =
+    roomUser?.name ?: userId.full
+
+/**
+ * Resolves a user's display name with fallback to localpart only.
+ * Useful for more compact displays.
+ */
+fun getUserDisplayNameShort(roomUser: RoomUser?, userId: UserId): String =
+    roomUser?.name ?: userId.localpart

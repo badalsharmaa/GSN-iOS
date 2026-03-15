@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +45,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.getsafenowclient.call.CallBubbleType
 import com.example.getsafenowclient.common.ui.GsnAvatarAdvanced
+import com.example.getsafenowclient.ui.tokens.DesignTokens
+import com.example.getsafenowclient.utils.DurationFormatter
 import com.example.getsafenowclient.utils.fullDayText
 import com.example.getsafenowclient.utils.timeText
 import compose.icons.FontAwesomeIcons
@@ -81,6 +84,7 @@ fun RoomHeader(
     roomName: String,
     roomAvatarUrl: String?,
     roomStatus: String, // e.g., "Active now"
+    statusColor: Color = GsnTheme.colors.textSecondary,
     onBackClick: () -> Unit,
     onStarClick: () -> Unit,
 ) {
@@ -89,20 +93,20 @@ fun RoomHeader(
             .fillMaxWidth()
             .background(GsnTheme.colors.bgCanvasDefault)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-            .padding(horizontal = 8.dp, vertical = 12.dp),
+            .padding(horizontal = DesignTokens.Spacing.sm, vertical = DesignTokens.Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.md)
     ) {
         IconButton(onClick = onBackClick) {
             Icon(
                 imageVector = FontAwesomeIcons.Solid.ArrowLeft,
                 contentDescription = "Back",
                 tint = GsnTheme.colors.iconPrimary,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(DesignTokens.IconSize.medium)
             )
         }
         GsnAvatarAdvanced(
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(DesignTokens.AvatarSize.medium),
             id = roomId,
             name = roomName,
             url = roomAvatarUrl,
@@ -117,7 +121,7 @@ fun RoomHeader(
             Text(
                 text = roomStatus,
                 style = GsnTheme.typography.fontBodySmMedium,
-                color = GsnTheme.colors.textSuccessPrimary // Assuming 'Active now' is a success state
+                color = statusColor
             )
         }
         IconButton(onClick = onStarClick) {
@@ -125,7 +129,7 @@ fun RoomHeader(
                 imageVector = FontAwesomeIcons.Regular.Star,
                 contentDescription = "Favorite",
                 tint = GsnTheme.colors.iconSecondary,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(DesignTokens.IconSize.medium)
             )
         }
     }
@@ -152,12 +156,17 @@ fun ChatMessageBubble(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = horizontalArrangement
     ) {
-        Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
+        Column(
+            horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
+            modifier = Modifier
+                .fillMaxWidth(DesignTokens.ContentWidth.messageBubbleFraction)
+                .widthIn(max = DesignTokens.ContentWidth.messageBubbleMax)
+        ) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(DesignTokens.CornerRadius.md))
                     .background(bubbleColor)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = DesignTokens.Spacing.md, vertical = DesignTokens.Spacing.sm)
             ) {
                 Text(
                     text = text,
@@ -177,7 +186,7 @@ fun ChatMessageBubble(
                 text = statusText,
                 style = GsnTheme.typography.fontBodySmMedium,
                 color = statusColor,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                modifier = Modifier.padding(horizontal = DesignTokens.Spacing.xs, vertical = DesignTokens.Spacing.xs / 2)
             )
         }
     }
@@ -251,7 +260,7 @@ fun VoiceCallBubble(
             CallBubbleType.OUTGOING_ENDED,
             CallBubbleType.INCOMING_ENDED
         ) -> {
-            "Duration ${formatCallDuration(durationMs)}"
+            "Duration ${DurationFormatter.formatMillis(durationMs)}"
         }
 
         type == CallBubbleType.OUTGOING_RINGING || type == CallBubbleType.INCOMING_RINGING ->
@@ -270,19 +279,24 @@ fun VoiceCallBubble(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = horizontalArrangement
     ) {
-        Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
+        Column(
+            horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
+            modifier = Modifier
+                .fillMaxWidth(DesignTokens.ContentWidth.messageBubbleFraction)
+                .widthIn(max = DesignTokens.ContentWidth.messageBubbleMax)
+        ) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(DesignTokens.CornerRadius.md))
                     .background(bubbleColor)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = DesignTokens.Spacing.md, vertical = DesignTokens.Spacing.sm + DesignTokens.Spacing.xs / 2),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
             ) {
                 // Icon container
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(DesignTokens.IconSize.large)
                         .background(Color.White.copy(alpha = 0.2f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -290,7 +304,7 @@ fun VoiceCallBubble(
                         imageVector = icon,
                         contentDescription = null,
                         tint = contentColor,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(DesignTokens.IconSize.small)
                     )
                 }
 
@@ -315,7 +329,7 @@ fun VoiceCallBubble(
                 text = Instant.fromEpochMilliseconds(timestamp).timeText(),
                 style = GsnTheme.typography.fontBodySmMedium,
                 color = GsnTheme.colors.textSecondary,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                modifier = Modifier.padding(horizontal = DesignTokens.Spacing.xs, vertical = DesignTokens.Spacing.xs / 2)
             )
         }
     }
@@ -331,7 +345,7 @@ fun DateSeparator(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier.fillMaxWidth().padding(vertical = 16.dp),
+        modifier = modifier.fillMaxWidth().padding(vertical = DesignTokens.Spacing.lg),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -341,7 +355,7 @@ fun DateSeparator(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
                 .background(GsnTheme.colors.bgSubtleSecondary)
-                .padding(vertical = 4.dp, horizontal = 12.dp)
+                .padding(vertical = DesignTokens.Spacing.xs, horizontal = DesignTokens.Spacing.md)
         )
     }
 }
@@ -372,10 +386,10 @@ fun MessageInput(
         modifier = modifier
             .fillMaxWidth()
             .background(GsnTheme.colors.bgCanvasDefault)
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)) // ✅ Add safe area padding for iOS home indicator
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+            .padding(horizontal = DesignTokens.Spacing.lg, vertical = DesignTokens.Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
     ) {
         // 1. Left: Text Input
         BasicTextField(
@@ -401,8 +415,8 @@ fun MessageInput(
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
                     ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = DesignTokens.Spacing.lg, vertical = DesignTokens.Spacing.sm + DesignTokens.Spacing.xs / 2),
+                    shape = RoundedCornerShape(DesignTokens.CornerRadius.md + DesignTokens.CornerRadius.sm),
                 )
             }
         )
@@ -411,13 +425,13 @@ fun MessageInput(
         IconButton(
             onClick = onSendClick,
             enabled = value.isNotBlank(),
-            modifier = Modifier.size(35.dp)
+            modifier = Modifier.size(DesignTokens.IconSize.large + DesignTokens.Spacing.xs)
         ) {
             Icon(
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
                 contentDescription = "Send",
                 tint = if (value.isNotBlank()) GsnTheme.colors.bgAccentRest else GsnTheme.colors.iconDisabled,
-                modifier = Modifier.size(25.dp)
+                modifier = Modifier.size(DesignTokens.IconSize.mediumSmall + DesignTokens.Spacing.xs)
             )
         }
 
@@ -425,8 +439,8 @@ fun MessageInput(
         Box {
             Box(
                 modifier = Modifier
-                    .size(35.dp)
-                    .clip(RoundedCornerShape(8.dp)) // Square with rounded corners
+                    .size(DesignTokens.IconSize.large + DesignTokens.Spacing.xs)
+                    .clip(RoundedCornerShape(DesignTokens.CornerRadius.sm))
                     .background(GsnTheme.colors.bgSubtleSecondary)
                     .clickable { showMenu = true },
                 contentAlignment = Alignment.Center
@@ -435,7 +449,7 @@ fun MessageInput(
                     imageVector = FontAwesomeIcons.Solid.Plus,
                     contentDescription = "More options",
                     tint = GsnTheme.colors.iconPrimary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(DesignTokens.IconSize.mediumSmall)
                 )
             }
 
@@ -448,7 +462,7 @@ fun MessageInput(
                 DropdownMenuItem(
                     text = { Text("Send Image", style = GsnTheme.typography.fontBodyMdRegular, color = GsnTheme.colors.textPrimary) },
                     onClick = { showMenu = false; onSendImage() },
-                    leadingIcon = { Icon(FontAwesomeIcons.Solid.Image, contentDescription = null, tint = GsnTheme.colors.iconSecondary, modifier = Modifier.size(20.dp)) },
+                    leadingIcon = { Icon(FontAwesomeIcons.Solid.Image, contentDescription = null, tint = GsnTheme.colors.iconSecondary, modifier = Modifier.size(DesignTokens.IconSize.mediumSmall)) },
                     colors = MenuDefaults.itemColors(
                         textColor = GsnTheme.colors.textPrimary,
                         leadingIconColor = GsnTheme.colors.iconSecondary
@@ -501,8 +515,8 @@ fun MessageInput(
 
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .size(DesignTokens.AvatarSize.medium)
+                .clip(RoundedCornerShape(DesignTokens.CornerRadius.md + DesignTokens.Spacing.sm))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {
@@ -523,7 +537,7 @@ fun MessageInput(
                 imageVector = mediaIcon,
                 contentDescription = contentDesc,
                 tint = GsnTheme.colors.iconDisabled,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(DesignTokens.IconSize.mediumSmall + DesignTokens.Spacing.xs / 2)
             )
         }
     }
@@ -535,7 +549,7 @@ fun ChatSystemMessageBubble(text: String, timestamp: Long) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = DesignTokens.Spacing.xs),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -789,9 +803,4 @@ private fun FullRoomScreenPreview() {
         }
     }
 }
-private fun formatCallDuration(durationMs: Long): String {
-    val totalSeconds = durationMs / 1000
-    val m = totalSeconds / 60
-    val s = totalSeconds % 60
-    return "${m}:${s.toString().padStart(2, '0')}"
-}
+

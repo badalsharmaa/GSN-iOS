@@ -37,6 +37,18 @@ fun Instant.fullDayText() = fullDayFormat(this)
 @OptIn(ExperimentalTime::class)
 fun Instant.timeText() = timeFormat(this)
 
+/**
+ * Format timestamp for home screen list preview.
+ * Returns format like "Jan 25", "Feb 3", etc.
+ */
+@OptIn(ExperimentalTime::class)
+fun Instant.listPreviewText(): String {
+    val tz = TimeZone.currentSystemDefault()
+    val localDateTime = this.toLocalDateTime(tz)
+    val month = localDateTime.month.name.substring(0, 3).lowercase().replaceFirstChar { it.uppercaseChar() }
+    return "$month ${localDateTime.day}"
+}
+
 private fun LocalDate.weekOfYear(): Int {
     val firstDayOfYear = LocalDate(year, 1, 1)
     val daysFromFirstDay = dayOfYear - firstDayOfYear.dayOfYear

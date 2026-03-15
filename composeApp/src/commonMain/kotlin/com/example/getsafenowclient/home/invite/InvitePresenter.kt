@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.getsafenowclient.component.InviteListItemData
 import com.example.getsafenowclient.home.HomeViewScreenModel
+import com.example.getsafenowclient.utils.getUserDisplayNameShort
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -46,7 +47,7 @@ fun invitePresenter(
                         if (inviterId != null) {
                             // We found the inviter's ID, now get their profile name for that room.
                             client.user.getById(roomId, inviterId).map { roomUser ->
-                                roomUser?.name ?: inviterId.localpart // Fallback to user ID
+                                getUserDisplayNameShort(roomUser, inviterId)
                             }
                         } else {
                             // Fallback to the room's title if we can't find the inviter.

@@ -27,7 +27,6 @@ object StateEventPreviewFormatter {
             Membership.INVITE -> "$senderFriendly invited $targetFriendly"
             Membership.BAN -> "$senderFriendly removed $targetFriendly"
             Membership.KNOCK -> "$targetFriendly requested access"
-            else -> "Membership updated"
         }
     }
 }

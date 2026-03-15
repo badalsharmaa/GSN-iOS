@@ -17,6 +17,7 @@ import com.example.getsafenowclient.component.DateSeparator
 import com.example.getsafenowclient.component.VoiceCallBubble
 import com.example.getsafenowclient.component.chat.VideoMessageBubble
 import com.example.getsafenowclient.component.chat.VoiceMessageBubble
+import com.example.getsafenowclient.utils.formatDuration
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import net.folivo.trixnity.client.MatrixClient
@@ -403,12 +404,8 @@ data class SyntheticCallItem(
 }
 
 
-private fun formatDuration(durationMs: Long): String {
-    val totalSeconds = durationMs / 1000
-    val m = totalSeconds / 60
-    val s = totalSeconds % 60
-    return "${m}:${s.toString().padStart(2, '0')}"
-}
+
+
 
 
 

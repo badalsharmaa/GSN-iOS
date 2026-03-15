@@ -49,6 +49,8 @@ import com.example.getsafenowclient.call.CallState
 import com.example.getsafenowclient.call.CallUiState
 import com.example.getsafenowclient.call.EndCallReason
 import com.example.getsafenowclient.common.ui.GsnAvatarAdvanced
+import com.example.getsafenowclient.ui.tokens.DesignTokens
+import com.example.getsafenowclient.utils.formatDuration
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ChevronDown
@@ -98,9 +100,9 @@ fun CallVideoLayout(
             var offsetX by remember { mutableStateOf(0f) }
             var offsetY by remember { mutableStateOf(0f) }
 
-            // Pip Dimensions (fixed for now, could be dynamic)
-            val pipWidth = 100.dp
-            val pipHeight = 160.dp
+            // Pip Dimensions
+            val pipWidth = DesignTokens.ComponentSize.pipWidth
+            val pipHeight = DesignTokens.ComponentSize.pipHeight
             val pipWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { pipWidth.toPx() }
             val pipHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { pipHeight.toPx() }
             
@@ -134,9 +136,9 @@ fun CallVideoLayout(
                     }
                     .width(pipWidth)
                     .height(pipHeight)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(DesignTokens.CornerRadius.md))
                     .background(Color.DarkGray)
-                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(DesignTokens.CornerRadius.md))
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
@@ -630,11 +632,8 @@ private fun CallStatusText(
     )
 }
 
-private fun formatDuration(seconds: Long): String {
-    val m = seconds / 60
-    val s = seconds % 60
-    return "${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}"
-}
+
+
 
 
 @Preview

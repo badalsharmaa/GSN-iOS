@@ -20,8 +20,8 @@ actual fun VideoRenderer(
     modifier: Modifier,
     isMirror: Boolean
 ) {
-    // Track currently attached video track (same pattern as Android)
-    val currentTrack = remember { mutableStateOf<RTCVideoTrack?>(null) }
+    // Track currently attached video track
+    val currentTrack = remember { mutableStateOf<com.shepeliev.webrtckmp.VideoTrack?>(null) }
 
     UIKitView(
         factory = {
@@ -36,8 +36,7 @@ actual fun VideoRenderer(
         },
         update = { view ->
             val videoView = view as RTCMTLVideoView
-
-            val newTrack = stream.videoTracks.firstOrNull() as? RTCVideoTrack
+            val newTrack = stream.videoTracks.firstOrNull()
 
             if (newTrack != currentTrack.value) {
                 currentTrack.value?.removeRenderer(videoView)

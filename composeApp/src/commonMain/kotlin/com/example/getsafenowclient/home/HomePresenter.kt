@@ -1,6 +1,7 @@
 package com.example.getsafenowclient.home
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -8,10 +9,9 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.getsafenowclient.component.ConversationListItemData
+import com.example.getsafenowclient.utils.listPreviewText
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import net.folivo.trixnity.client.MatrixClient
 import net.folivo.trixnity.clientserverapi.client.SyncState
 import net.folivo.trixnity.core.model.RoomId
@@ -32,6 +32,9 @@ fun homePresenter(
 ): Pair<HomeState, (HomeEvent) -> Unit> {
 
     var searchQuery by remember { mutableStateOf("") }
+    
+    // Track if we've loaded data at least once to prevent blocking UI on background resume
+    var hasLoadedOnce by remember { mutableStateOf(false) }
 
     val homeData by produceState<HomeData>(initialValue = HomeData()) { 
         val profileFlow = combine(client.displayName, client.avatarUrl) { displayName, avatarUrl ->
@@ -49,7 +52,7 @@ fun homePresenter(
                     name = roomHeader.title,
                     avatarUrl = roomHeader.avatarUrl?.toString(),
                     lastMessage = roomHeader.lastMessageText,
-                    timestamp = formatTimestamp(roomHeader.lastMessageDate),
+                    timestamp = roomHeader.lastMessageDate.listPreviewText(),
                     unreadCount = roomHeader.unreadCount.toInt(),
                     isFavorited = false // Placeholder for favorite status
                 )
@@ -65,6 +68,13 @@ fun homePresenter(
 
     val (profile, allConversations, hasNewInvites) = homeData
     val syncState by client.syncState.collectAsState()
+    
+    // Mark as loaded once we have profile data
+    LaunchedEffect(profile) {
+        if (profile != null) {
+            hasLoadedOnce = true
+        }
+    }
 
     val filteredConversations = remember(allConversations, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -95,7 +105,8 @@ fun homePresenter(
         userName = profile?.userName ?: "",
         userAvatarUrl = profile?.userAvatarUrl,
         conversations = filteredConversations,
-        isLoading = syncState == SyncState.INITIAL_SYNC || profile == null,
+        // Only show blocking loading screen on first launch, not on background resume
+        isLoading = !hasLoadedOnce && profile == null,
         searchQuery = searchQuery,
         hasNewInvites = hasNewInvites
     )
@@ -115,9 +126,3 @@ private data class ProfileData(
     val userAvatarUrl: String?
 )
 
-@OptIn(ExperimentalTime::class)
-private fun formatTimestamp(instant: Instant): String {
-    val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-    val month = localDateTime.month.name.substring(0, 3).lowercase().replaceFirstChar { it.uppercaseChar() }
-    return "$month ${localDateTime.day}"
-}

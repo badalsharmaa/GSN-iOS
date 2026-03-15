@@ -47,8 +47,11 @@ import com.example.getsafenowclient.room.sharing.VoiceRecorderState
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
 import compose.icons.fontawesomeicons.regular.TimesCircle
+import io.getsafenow.libraries.gsn_theme.customtheme.GsnTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import com.example.getsafenowclient.utils.PresenceUtils
+import com.example.getsafenowclient.utils.nameFlow
 import net.folivo.trixnity.client.MatrixClient
 import net.folivo.trixnity.client.room
 import net.folivo.trixnity.client.user
@@ -95,15 +98,14 @@ fun RoomScreen(
     var shouldStickToBottom by remember { mutableStateOf(true) }
 
     // -------------------------------------------------------
-    // Room Title logic
+    // Room Title logic (Robust)
     // -------------------------------------------------------
+    // Use the same name resolution as the Home screen
+    val roomName by remember(roomId) { roomId.nameFlow(client) }
+        .collectAsState(initial = "Loading...")
+
+    // Calculate heroId for Calls (Opponent ID)
     val heroId = roomState?.name?.heroes?.firstOrNull()
-    val roomName =
-        roomState?.name?.explicitName
-            ?: heroId?.let { uid ->
-                client.user.getById(roomId, uid).collectAsState(null).value?.name ?: uid.localpart
-            }
-            ?: "Unknown Room"
 
     // -------------------------------------------------------
     // Inline top loader visibility
@@ -210,13 +212,26 @@ fun RoomScreen(
     Scaffold(
         modifier = modifier.fillMaxSize().imePadding(),
         topBar = {
-            // Presence Status Calculation
-            val statusText = if (otherMemberPresence?.isCurrentlyActive == true) {
-                "Online"
-            } else {
-                // Fallback or Last Seen could be added here
-                "Active now" // Keep default for now or use "Offline"
-            }
+            // Presence Status Calculation (Robust)
+            // We assume 'otherMemberPresence' is a RoomUser which might have lastActive details
+            // Trixnity RoomUser has 'presence' field if available?
+            // Actually, we need to check what 'otherMemberPresence' actually IS from the component.
+            // Assuming it acts like the Trixnity User/Member model.
+            // For now, using a safe fallback if properties are missing.
+            
+            // NOTE: Trixnity's RoomUser doesn't expose 'lastActiveAgo' directly on the top level usually?
+            // checking usage: if (otherMemberPresence?.isCurrentlyActive == true)
+            // We will use the 'PresenceUtils' with whatever data we have.
+            // If we don't have timestamp, we fallback.
+            
+            val isOnline = otherMemberPresence?.isCurrentlyActive == true
+            // If Trixnity exposes a way to get timestamp, we'd use it. 
+            // For now, we only have boolean from previous code clue. 
+            // Let's assume we can get it or default to just Online/Offline.
+            // Ideally: otherMemberPresence?.presence?.lastActiveAgo
+            
+            val statusText = PresenceUtils.formatStatus(isOnline, null) // Timestamp TODO if available
+            val statusColor = if (isOnline) GsnTheme.colors.textSuccessPrimary else GsnTheme.colors.textSecondary
 
             RoomHeader(
                 client = client,
@@ -224,6 +239,7 @@ fun RoomScreen(
                 roomName = roomName,
                 roomAvatarUrl = roomState?.avatarUrl,
                 roomStatus = statusText,
+                statusColor = statusColor,
                 onBackClick = { onBack?.invoke() },
                 onStarClick = {}
             )

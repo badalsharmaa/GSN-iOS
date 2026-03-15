@@ -1,6 +1,8 @@
 package com.example.getsafenowclient.call
 
 import com.example.getsafenowclient.call.webrtc.WebRtcManager
+import com.example.getsafenowclient.call.repository.CallStateRepository
+import com.example.getsafenowclient.call.repository.IncomingCallData
 import com.example.getsafenowclient.permissions.CameraPermission
 import com.example.getsafenowclient.permissions.MicrophonePermission
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +29,8 @@ class CallScreenModel(
     private val clientProvider: () -> MatrixClient,
     private val backgroundManager: CallBackgroundManager,
     private val cameraPermission: CameraPermission,
-    private val microphonePermission: MicrophonePermission
+    private val microphonePermission: MicrophonePermission,
+    private val callStateRepository: CallStateRepository  // ✅ Added for persistent storage
 ) {
 
     private val _state = MutableStateFlow(CallUiState())
@@ -35,6 +38,18 @@ class CallScreenModel(
 
     init {
         observeWebRtcCallbacks()
+        
+        backgroundManager.onAnswer = {
+            if (_state.value.callState is CallState.IncomingRinging) {
+                dispatch(CallEvent.AcceptCall)
+            } else {
+                // Race condition: User answered on native UI, but Sync hasn't delivered invite yet.
+                _state.update { it.copy(pendingAnswer = true) }
+            }
+        }
+        backgroundManager.onHangup = {
+             dispatch(CallEvent.Hangup) // Or RejectCall depending on state
+        }
     }
 
     fun dispatch(event: CallEvent) {
@@ -63,7 +78,7 @@ class CallScreenModel(
         }
         
         // Start background service & audio focus
-        backgroundManager.startBackgroundExecution()
+        backgroundManager.startBackgroundExecution(isIncoming = false)
         backgroundManager.requestAudioFocus()
 
         // Resolve Peer Info immediately
@@ -176,15 +191,22 @@ class CallScreenModel(
     private suspend fun acceptIncomingCall(current: CallUiState) {
         val st = current.callState
         if (st !is CallState.IncomingRinging) return
+        val rid = current.roomId?.let { RoomId(it) } ?: return
+
+        // ✅ Validate SDP offer before accepting
+        if (st.offerSdp.isBlank()) {
+            co.touchlab.kermit.Logger.e { "Cannot accept call: SDP offer is empty" }
+            endCall(EndCallReason.Error)
+            return
+        }
 
         // PERMISSION CHECK (Receiver Side)
         // Check permissions before answering. If missing, request.
-        if (!microphonePermission.hasPermission()) {
-            val granted = microphonePermission.requestPermission()
-            if (!granted) return
-        }
-        if (current.isVideoCall && !cameraPermission.hasPermission()) {
-            val granted = cameraPermission.requestPermission()
+        val granted = microphonePermission.requestPermission()
+        if (current.isVideoCall) {
+            val cameraGranted = cameraPermission.requestPermission()
+            if (!cameraGranted) return
+        } else {
             if (!granted) return
         }
 
@@ -193,8 +215,23 @@ class CallScreenModel(
         // Wait for hardware to init (prevent empty audio/video)
         localStreamSetupJob?.join()
 
+        // ✅ Log SDP for debugging
+        co.touchlab.kermit.Logger.d { 
+            "Accepting call with SDP offer (first 100 chars): ${st.offerSdp.take(100)}..." 
+        }
+
         webrtc.acceptCall(st.offerSdp, current.isVideoCall)
         signaling.notifyAnswerGenerated()
+
+        // ✅ Clear persisted state after accepting
+        scope.launch {
+            try {
+                callStateRepository.clearCall()
+                co.touchlab.kermit.Logger.d { "✅ Cleared persisted call state after accept" }
+            } catch (e: Exception) {
+                co.touchlab.kermit.Logger.e(e) { "Failed to clear call state" }
+            }
+        }
 
         _state.update {
             it.copy(callState = CallState.Connecting(st.callId, st.opponentId))
@@ -207,6 +244,16 @@ class CallScreenModel(
         val rid = current.roomId?.let { RoomId(it) } ?: return
 
         webrtc.ringtoneController?.stopAllTones()
+
+        // ✅ Clear persisted state before rejecting
+        scope.launch {
+            try {
+                callStateRepository.clearCall()
+                co.touchlab.kermit.Logger.d { "✅ Cleared persisted call state after reject" }
+            } catch (e: Exception) {
+                co.touchlab.kermit.Logger.e(e) { "Failed to clear call state" }
+            }
+        }
 
         signaling.sendReject(rid, st.callId)
         endCall(EndCallReason.Rejected)
@@ -244,11 +291,30 @@ class CallScreenModel(
             return
         }
         
+        // ✅ Persist call state immediately for app restart recovery
+        scope.launch {
+            try {
+                val callData = IncomingCallData(
+                    roomId = roomId.full,
+                    callId = e.callId,
+                    offerSdp = e.offerSdp,
+                    isVideo = e.isVideo,
+                    opponentId = e.opponentId
+                )
+                callStateRepository.saveIncomingCall(callData)
+                co.touchlab.kermit.Logger.d { 
+                    "✅ Persisted incoming call state: callId=${e.callId} roomId=${roomId.full}" 
+                }
+            } catch (ex: Exception) {
+                co.touchlab.kermit.Logger.e(ex) { "Failed to persist call state" }
+            }
+        }
+        
         webrtc.ringtoneController?.startRingtone()
         updatePeerInfo(roomId, e.opponentId)
 
         // Start background service & audio focus
-        backgroundManager.startBackgroundExecution()
+        backgroundManager.startBackgroundExecution(isIncoming = true, callerName = e.opponentId)
         backgroundManager.requestAudioFocus()
 
         localStreamSetupJob = scope.launch {
@@ -267,6 +333,16 @@ class CallScreenModel(
                     offerSdp = e.offerSdp
                 )
             )
+        }
+
+        // Auto-accept if user already answered via CallKit/Notification
+        if (_state.value.pendingAnswer) {
+            scope.launch {
+                // Clear flag
+                _state.update { it.copy(pendingAnswer = false) }
+                // Accept
+                acceptIncomingCall(_state.value) 
+            }
         }
     }
 
@@ -332,6 +408,18 @@ class CallScreenModel(
     }
 
     private fun endCall(reason: EndCallReason) {
+        co.touchlab.kermit.Logger.i("CallScreenModel → endCall (reason=$reason)")
+        
+        // ✅ Clear persisted call state on any end
+        scope.launch {
+            try {
+                callStateRepository.clearCall()
+                co.touchlab.kermit.Logger.d { "✅ Cleared persisted call state on endCall" }
+            } catch (e: Exception) {
+                co.touchlab.kermit.Logger.e(e) { "Failed to clear call state" }
+            }
+        }
+        
         webrtc.ringtoneController?.stopAllTones()
         signaling.clearCurrentCall()
         webrtc.close()
@@ -363,6 +451,30 @@ class CallScreenModel(
             _state.value = CallUiState()
         }
     }
+    
+    /**
+     * Handle remote hangup event from Matrix.
+     * Called when the other party ends the call.
+     */
+    fun onRemoteHangup(callId: String) {
+        co.touchlab.kermit.Logger.i("CallScreenModel → Remote hangup received for call: $callId")
+        
+        // ✅ Clear persisted state
+        scope.launch {
+            try {
+                callStateRepository.clearCall()
+                co.touchlab.kermit.Logger.d { "✅ Cleared persisted call state after remote hangup" }
+            } catch (e: Exception) {
+                co.touchlab.kermit.Logger.e(e) { "Failed to clear call state" }
+            }
+        }
+        
+        // ✅ Dismiss notification if exists
+        backgroundManager.stopBackgroundExecution()
+        
+        // End call with remote hangup reason
+        endCall(EndCallReason.RemoteHangup)
+    }
 
     private fun observeWebRtcCallbacks() {
         webrtc.onConnected = { dispatch(CallEvent.WebRtcConnected) }
@@ -372,19 +484,79 @@ class CallScreenModel(
         webrtc.onLocalVideoStopped = { dispatch(CallEvent.LocalVideoStopped) }
     }
 
-    fun resumeIncomingCall(
+    /**
+     * Resume a call from notification/intent (handles both incoming and outgoing)
+     */
+    fun resumeCall(
         callId: String,
+        callerName: String?,
         isVideo: Boolean,
         isIncoming: Boolean
     ) {
         val current = _state.value
+        
+        // Optimistic Restoration: If we are fresh (Idle) but have a call intent, 
+        // show the appropriate UI immediately.
+        if (current.callState is CallState.Idle) {
+            if (isIncoming) {
+                // Incoming call - show ringing UI
+                _state.update {
+                    it.copy(
+                        roomId = "pending_sync", // Placeholder until sync provides real roomId
+                        peerId = callerName ?: "Unknown",
+                        peerName = callerName,
+                        callState = CallState.IncomingRinging(
+                            callId = callId,
+                            opponentId = callerName ?: "Unknown",
+                            offerSdp = "" // Placeholder - CallSignalingHandler will provide real SDP
+                        ),
+                        isVideoCall = isVideo,
+                        isVideoEnabled = isVideo,
+                        isMinimized = false
+                    )
+                }
+            } else {
+                // ✅ Outgoing call - show outgoing ringing UI
+                _state.update {
+                    it.copy(
+                        roomId = "pending_sync",
+                        peerId = callerName ?: "Unknown",
+                        peerName = callerName,
+                        callState = CallState.OutgoingRinging(
+                            callId = callId,
+                            opponentId = callerName ?: "Unknown"
+                        ),
+                        isVideoCall = isVideo,
+                        isVideoEnabled = isVideo,
+                        isMinimized = false
+                    )
+                }
+            }
+            // TRIGGER SIGNALING/SYNC: 
+            // SessionManager.startSync() should already be running.
+            // CallSignalingHandler will eventually overwrite this state with the REAL invite.
+            return
+        }
+
+        // If already in a call state, just un-minimize
         if (current.callState is CallState.IncomingRinging ||
+            current.callState is CallState.OutgoingRinging ||
             current.callState is CallState.Connecting ||
-            current.callState is CallState.InCall
+            current.callState is CallState.InCall ||
+            current.callState is CallState.Reconnecting
         ) {
             _state.update { it.copy(isMinimized = false) }
         }
     }
+    
+    // ✅ Backward compatibility alias
+    @Deprecated("Use resumeCall instead", ReplaceWith("resumeCall(callId, callerName, isVideo, isIncoming)"))
+    fun resumeIncomingCall(
+        callId: String,
+        callerName: String?,
+        isVideo: Boolean,
+        isIncoming: Boolean
+    ) = resumeCall(callId, callerName, isVideo, isIncoming)
     
     private fun updatePeerInfo(roomId: RoomId, userIdFull: String?) {
         if (userIdFull.isNullOrBlank()) return

@@ -40,6 +40,7 @@ class CallSignalingHandler(
         observeWebRtcEvents()
     }
 
+    @OptIn(ExperimentalTime::class)
     private fun observeMatrixCallEvents() {
         scope.launch {
             // We need to wait for the client to be available before observing
@@ -72,6 +73,14 @@ class CallSignalingHandler(
                         when (content) {
                             is CallEventContent.Invite -> {
                                 if (senderId == myUserId) continue
+
+                                // 🛑 GHOST CALL FIX: Check Event Age
+                                val now = Clock.System.now().toEpochMilliseconds()
+                                val eventAge = now - event.originTimestamp
+                                if (eventAge > 60_000) { // 60 seconds tolerance
+                                    Logger.w("CallSignaling → Ignoring Expired Invite (Age: ${eventAge}ms). EventID: $eventId")
+                                    continue
+                                }
 
                                 if (currentCallId != null && currentCallId != content.callId) {
                                     // Glare Handling: Both parties called simultaneously.

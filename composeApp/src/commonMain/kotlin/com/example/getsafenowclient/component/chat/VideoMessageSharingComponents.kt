@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.getsafenowclient.room.sharing.VideoRecorderState
 import com.example.getsafenowclient.room.sharing.VideoRecorderUiState
+import com.example.getsafenowclient.utils.formatTime
 import com.example.getsafenowclient.utils.timeText
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
@@ -238,11 +239,8 @@ fun VideoRecordingDialog(
     }
 }
 
-private fun formatTime(seconds: Int): String {
-    val m = seconds / 60
-    val s = seconds % 60
-    return "${m}:${s.toString().padStart(2, '0')}"
-}
+
+
 
 /**
  * Video Message Bubble for Chat.

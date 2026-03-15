@@ -59,13 +59,9 @@ fun HomeNewScreen(
                 )
             },
             content = {
+                // Only show skeleton on true first launch, not on background resume
                 if (homeState.isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LoadingScreen(loadingMessage = "Loading conversations...")
-                    }
+                    com.example.getsafenowclient.component.ConversationListSkeleton()
                 } else {
                     Column(modifier = Modifier.fillMaxSize().padding(it)) {
                         HomeHeader(

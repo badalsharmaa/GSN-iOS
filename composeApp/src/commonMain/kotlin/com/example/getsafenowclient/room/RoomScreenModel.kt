@@ -25,6 +25,8 @@ import com.example.getsafenowclient.room.sharing.VoiceRecorderState
 import com.example.getsafenowclient.room.sharing.VoiceRecorderUiState
 import com.example.getsafenowclient.service.SessionManager
 import com.example.getsafenowclient.utils.CallUtils.isVideoOffer
+import com.example.getsafenowclient.utils.getUserDisplayName
+import com.example.getsafenowclient.utils.nameFlow
 import io.getsafenow.libraries.gsn_core.kmpmimetype.MimeTypes
 import io.getsafenow.libraries.kmputils.platformkmp.ContextFactory
 import io.getsafenow.libraries.kmputils.platformkmp.PlatformFile
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -289,9 +292,9 @@ class RoomComponentImpl(
                         val nameFlows = others.map { userId ->
                             client.user.getById(roomId, userId)
                                 .map { roomUser -> 
-                                    // RoomUser has 'name' but not 'displayName'
-                                    roomUser?.name ?: userId.full 
+                                    getUserDisplayName(roomUser, userId)
                                 }
+
                         }
                         combine(nameFlows) { names -> names.toList() }
                     }
@@ -332,12 +335,16 @@ class RoomComponentImpl(
         scope.launch {
             logger.d { "📞 Call bubble clicked: $callId" }
 
-            callModel.resumeIncomingCall(
+            // Resolve the name of the caller (Room Name / Hero Name)
+            val name = roomId.nameFlow(client).first()
+
+            // ✅ Use new resumeCall function that handles both directions
+            callModel.resumeCall(
                 callId = callId,
                 isVideo = isVideo,
                 isIncoming = isIncoming,
-
-                )
+                callerName = name
+            )
         }
     }
 
@@ -903,113 +910,33 @@ class RoomComponentImpl(
         val inviteContent = inviteEvent.content?.getOrNull() as? CallEventContent.Invite
             ?: return null
 
-        val answerEvent = sorted.firstOrNull { it.content?.getOrNull() is CallEventContent.Answer }
-        val hangupEvent = sorted.lastOrNull { it.content?.getOrNull() is CallEventContent.Hangup }
-        val hangupContent = hangupEvent?.content?.getOrNull() as? CallEventContent.Hangup
-
-        val myUserId = client.userId
-        val isOutgoing = inviteEvent.event.sender == myUserId
-
-        val isVideo = isVideoOffer(inviteContent.offer.sdp)
+        // Use unified CallStateResolver
+        val callState = com.example.getsafenowclient.utils.CallStateResolver.resolveCallState(
+            events = sorted,
+            callId = inviteContent.callId,
+            currentUserId = client.userId
+        )
 
         // We anchor the bubble at the hangup time if present, otherwise at invite time
+        val hangupEvent = sorted.lastOrNull { it.content?.getOrNull() is CallEventContent.Hangup }
         val representativeEvent = hangupEvent ?: inviteEvent
         val timestamp = representativeEvent.event.originTimestamp
 
-        // ❗ Correct usage:
         val id = representativeEvent.eventId.full
 
-        // Duration from answer → hangup (if both exist)
-        val durationMs: Long? =
-            if (answerEvent != null && hangupEvent != null) {
-                (hangupEvent.event.originTimestamp - answerEvent.event.originTimestamp)
-                    .takeIf { it > 0 }
-            } else null
-
-        val type = resolveCallBubbleType(
-            isOutgoing = isOutgoing,
-            hasAnswer = answerEvent != null,
-            hangupEvent = hangupEvent,
-            hangupContent = hangupContent
-        )
-
         val isMissed =
-            type == CallBubbleType.INCOMING_MISSED || type == CallBubbleType.OUTGOING_MISSED
-
-        val senderId = inviteEvent.event.sender
+            callState.bubbleType == CallBubbleType.INCOMING_MISSED || 
+            callState.bubbleType == CallBubbleType.OUTGOING_MISSED
 
         return CallItem(
             id = id,
             timestamp = timestamp,
-            senderId = senderId,
-            type = type,
-            isVideo = isVideo,
-            durationMs = durationMs,
+            senderId = inviteEvent.event.sender,
+            type = callState.bubbleType,
+            isVideo = callState.isVideo,
+            durationMs = callState.durationMs,
             isMissed = isMissed
         )
-    }
-
-
-    private fun resolveCallBubbleType(
-        isOutgoing: Boolean,
-        hasAnswer: Boolean,
-        hangupEvent: TimelineEvent?,
-        hangupContent: CallEventContent.Hangup?
-    ): CallBubbleType {
-        val reason = hangupContent?.reason
-
-        // No answer case
-        if (!hasAnswer) {
-            if (hangupEvent == null) {
-                // Just an invite with no visible hangup yet
-                return if (isOutgoing) {
-                    CallBubbleType.OUTGOING_RINGING
-                } else {
-                    CallBubbleType.INCOMING_RINGING
-                }
-            }
-
-            // There was a hangup without answer → early termination
-            return if (isOutgoing) {
-                when (reason) {
-                    CallEventContent.Hangup.Reason.USER_BUSY ->
-                        CallBubbleType.OUTGOING_MISSED
-
-                    CallEventContent.Hangup.Reason.USER_HANGUP ->
-                        CallBubbleType.OUTGOING_CANCELLED
-
-                    CallEventContent.Hangup.Reason.ICE_FAILED,
-                    CallEventContent.Hangup.Reason.ICE_TIMEOUT,
-                    CallEventContent.Hangup.Reason.USER_MEDIA_FAILED ->
-                        CallBubbleType.FAILED
-
-                    else -> CallBubbleType.OUTGOING_CANCELLED
-                }
-            } else {
-                when (reason) {
-                    CallEventContent.Hangup.Reason.USER_BUSY ->
-                        CallBubbleType.INCOMING_MISSED
-
-                    CallEventContent.Hangup.Reason.USER_HANGUP ->
-                        // Remote hung up before I answered → missed from my POV
-                        CallBubbleType.INCOMING_MISSED
-
-                    CallEventContent.Hangup.Reason.ICE_FAILED,
-                    CallEventContent.Hangup.Reason.ICE_TIMEOUT,
-                    CallEventContent.Hangup.Reason.USER_MEDIA_FAILED ->
-                        CallBubbleType.FAILED
-
-                    else -> CallBubbleType.INCOMING_MISSED
-                }
-            }
-        }
-
-        // Answer exists → it was a "real" call
-        return if (isOutgoing) {
-            CallBubbleType.OUTGOING_ENDED
-        } else {
-            CallBubbleType.INCOMING_ENDED
-        }
     }
 
     @Composable

@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.getsafenowclient.common.ui.GsnAvatarAdvanced
+import com.example.getsafenowclient.ui.tokens.DesignTokens
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
 import compose.icons.fontawesomeicons.Solid
@@ -81,17 +82,17 @@ fun HomeHeader(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = DesignTokens.Spacing.lg, vertical = DesignTokens.Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.lg)
     ) {
         // Top row: Avatar + Title
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.lg)
         ) {
             IconButton(onClick = onAvatarClick) {
                 GsnAvatarAdvanced(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(DesignTokens.AvatarSize.medium),
                     id = userId,
                     name = userName,
                     url = userAvatarUrl,
@@ -134,7 +135,7 @@ private fun ConversationSearchBar(
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
     ) {
         OutlinedTextField(
             modifier = Modifier
@@ -157,10 +158,10 @@ private fun ConversationSearchBar(
                     imageVector = FontAwesomeIcons.Solid.Search,
                     contentDescription = "Search",
                     tint = GsnTheme.colors.iconSecondary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(DesignTokens.IconSize.small)
                 )
             },
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(DesignTokens.CornerRadius.sm),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = GsnTheme.colors.bgSubtleSecondary,
                 unfocusedContainerColor = GsnTheme.colors.bgSubtleSecondary,
@@ -181,7 +182,7 @@ private fun ConversationSearchBar(
                 imageVector = FontAwesomeIcons.Solid.Filter,
                 contentDescription = "Sort or Filter",
                 tint = GsnTheme.colors.iconPrimary,
-                modifier = Modifier.size(12.dp)
+                modifier = Modifier.size(DesignTokens.IconSize.small)
             )
         }
     }
@@ -199,7 +200,7 @@ fun InviteButton(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
         ) {
             Text(
                 text = "Invites",
@@ -209,7 +210,7 @@ fun InviteButton(
             if (hasNewInvites) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(DesignTokens.Spacing.sm)
                         .clip(CircleShape)
                         .background(GsnTheme.colors.bgAccentRest)
                 )
@@ -268,24 +269,24 @@ fun ConversationItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onItemClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = DesignTokens.Spacing.lg, vertical = DesignTokens.Spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Avatar
         GsnAvatarAdvanced(
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(DesignTokens.AvatarSize.large),
             id = itemData.id,
             name = itemData.name,
             url = itemData.avatarUrl,
             client = client
         )
 
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(DesignTokens.Spacing.lg))
 
         // Name and Message
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.xs)
         ) {
             Text(
                 text = itemData.name,
@@ -303,12 +304,12 @@ fun ConversationItem(
             )
         }
 
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(DesignTokens.Spacing.lg))
 
         // Timestamp, Unread Badge, and Favorite
         Column(
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
         ) {
             Text(
                 text = itemData.timestamp,
@@ -317,13 +318,13 @@ fun ConversationItem(
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
             ) {
                 if (itemData.unreadCount > 0) {
                     UnreadBadge(count = itemData.unreadCount)
                 }
                 IconButton(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(DesignTokens.IconSize.medium),
                     onClick = onFavoriteClick
                 ) {
                     val starIcon = if (itemData.isFavorited) FontAwesomeIcons.Solid.Star else FontAwesomeIcons.Regular.Star
@@ -332,7 +333,7 @@ fun ConversationItem(
                         imageVector = starIcon,
                         contentDescription = if (itemData.isFavorited) "Unfavorite" else "Favorite",
                         tint = starTint,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(DesignTokens.IconSize.small)
                     )
                 }
             }
@@ -347,7 +348,7 @@ private fun UnreadBadge(
 ) {
     Box(
         modifier = modifier
-            .size(20.dp)
+            .size(DesignTokens.IconSize.mediumSmall)
             .clip(CircleShape)
             .background(GsnTheme.colors.bgAccentRest),
         contentAlignment = Alignment.Center
@@ -377,12 +378,12 @@ fun HomeFloatingActionButton(
             onClick = { isMenuExpanded = !isMenuExpanded },
             containerColor = GsnTheme.colors.bgActionPrimaryRest,
             contentColor = GsnTheme.colors.iconOnSolidPrimary,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(DesignTokens.CornerRadius.lg),
         ) {
             Icon(
                 imageVector = FontAwesomeIcons.Regular.Square,
                 contentDescription = "Compose",
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(DesignTokens.IconSize.medium)
             )
         }
 
@@ -396,14 +397,14 @@ fun HomeFloatingActionButton(
             DropdownMenuItem(
                 text = {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = FontAwesomeIcons.Solid.Pen,
                             contentDescription = null,
                             tint = GsnTheme.colors.iconPrimary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(DesignTokens.IconSize.small)
                         )
                         Text(
                             text = "Start New Chat",
@@ -416,7 +417,7 @@ fun HomeFloatingActionButton(
                     onStartNewChatClick()
                     isMenuExpanded = false
                 },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                contentPadding = PaddingValues(horizontal = DesignTokens.Spacing.md, vertical = DesignTokens.Spacing.md)
             )
             DropdownMenuItem(
                 text = {

@@ -22,8 +22,7 @@ val DefaultEventFilter: (TimelineEvent) -> Boolean = { e ->
         
         // Allow encrypted events through so Trixnity can decrypt them.
         // If we filter them here, the timeline will look empty until a manual reload.
-        null -> true 
-        
+
         else -> {
             // Check if it's explicitly an encrypted type if needed, 
             // but usually content is null if not yet parsed/decrypted into a known type.

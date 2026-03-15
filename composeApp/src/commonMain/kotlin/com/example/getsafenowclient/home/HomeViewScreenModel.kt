@@ -25,10 +25,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import net.folivo.trixnity.client.MatrixClient
 import net.folivo.trixnity.client.flatten
@@ -87,6 +90,12 @@ class HomeViewScreenModel(
                 .flatten()
                 .map { map -> map.values.filterNotNull() }   // list<Room>
                 .flatMapLatest { rooms ->
+                    // 🔍 DEBUG: Log raw rooms from database
+                    logger.d { "🗄️ Raw rooms from DB: ${rooms.size}" }
+                    rooms.forEach { room ->
+                        logger.d { "  DB Room: ${room.roomId.full} -> Membership: ${room.membership}" }
+                    }
+                    
                     if (rooms.isEmpty()) {
                         MutableStateFlow(emptyList())
                     } else {
@@ -101,6 +110,18 @@ class HomeViewScreenModel(
                 }
                 .distinctUntilChanged()
                 .stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
+
+        // 🔍 DEBUG: Log all rooms and their membership status
+        scope.launch {
+            allHeaders.collect { headers ->
+                logger.d { "📦 Total rooms: ${headers.size}" }
+                headers.forEach { (membership, header) ->
+                    logger.d { "  Room: ${header.title} (${header.id.full}) -> Membership: $membership" }
+                }
+                val inviteCount = headers.count { it.first == Membership.INVITE }
+                logger.d { "📨 Invite rooms found: $inviteCount" }
+            }
+        }
 
         // Invites Flow
         val invitesFlow = allHeaders.map { headersWithMembership ->
@@ -146,7 +167,15 @@ class HomeViewScreenModel(
 
         scope.launch { chatsFlow.collect { chatsState.value = it } }
         scope.launch { catalogFlow.collect { catalogState.value = it } }
-        scope.launch { invitesFlow.collect { invitesState.value = it } }
+        scope.launch { 
+            invitesFlow.collect { invites ->
+                logger.d { "📨 Invites flow updated: count=${invites.size}" }
+                invites.forEach { invite ->
+                    logger.d { "  - ${invite.title} (${invite.id.full})" }
+                }
+                invitesState.value = invites
+            } 
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -209,44 +238,42 @@ class HomeViewScreenModel(
                 is RoomMessageEventContent -> MessageEventFormatter.formatPreview(content)
 
                 // ---------------------------------------------------------
-                // 2) CALL EVENTS (Invite / Answer / Hangup)
+                // 2) CALL EVENTS (Invite / Answer / Hangup / Candidates)
+                // Use unified CallStateResolver for consistent states
                 // ---------------------------------------------------------
-                is CallEventContent.Invite -> {
-                    val isOutgoing = timelineEvent.event.sender == client.userId
-                    val isVideo = isVideoOffer(content.offer.sdp)
-
-                    if (isOutgoing)
-                        if (isVideo) "Outgoing video call" else "Outgoing call"
-                    else
-                        if (isVideo) "Incoming video call" else "Incoming call"
-                }
-
-                is CallEventContent.Answer -> {
-                    // This is rarely the last event, but handle anyway
-                    "Call answered"
-                }
-
+                is CallEventContent.Invite,
+                is CallEventContent.Answer,
+                is CallEventContent.Candidates,
                 is CallEventContent.Hangup -> {
-                    val isOutgoing = timelineEvent.event.sender == client.userId
-
-                    val reason = content.reason
-
-                    when (reason) {
-                        // Missed call cases
-                        CallEventContent.Hangup.Reason.USER_BUSY,
-                        CallEventContent.Hangup.Reason.USER_HANGUP -> {
-                            if (isOutgoing) "Outgoing call (missed)"
-                            else "Missed call"
+                    val callId = com.example.getsafenowclient.utils.CallStateResolver.getCallId(content)
+                    
+                    if (callId != null) {
+                        // Fetch recent timeline events to analyze the full call sequence
+                        val room = client.room.getById(room.roomId).first()
+                        val lastEventId = room?.lastEventId
+                        
+                        if (lastEventId != null) {
+                            val recentEvents = client.room.getTimelineEvents(
+                                roomId = room.roomId,
+                                startFrom = lastEventId,
+                                direction = net.folivo.trixnity.clientserverapi.model.rooms.GetEvents.Direction.BACKWARDS
+                            ) {
+                                maxSize = 100
+                                decryptionTimeout = kotlin.time.Duration.ZERO
+                            }.map { it.first() }.take(100).toList()
+                            
+                            // Use unified CallStateResolver
+                            val callState = com.example.getsafenowclient.utils.CallStateResolver.resolveCallState(
+                                events = recentEvents,
+                                callId = callId,
+                                currentUserId = client.userId
+                            )
+                            callState.previewText
+                        } else {
+                            "[unknown call]"
                         }
-
-                        // ICE or media failure
-                        CallEventContent.Hangup.Reason.ICE_FAILED,
-                        CallEventContent.Hangup.Reason.ICE_TIMEOUT,
-                        CallEventContent.Hangup.Reason.USER_MEDIA_FAILED ->
-                            "Call failed"
-
-                        // Call ended normally
-                        else -> "Call ended"
+                    } else {
+                        "[unknown call]"
                     }
                 }
 

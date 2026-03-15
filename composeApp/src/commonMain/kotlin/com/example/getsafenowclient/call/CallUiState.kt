@@ -22,7 +22,10 @@ data class CallUiState(
     val isMicEnabled: Boolean = true,
     val isSpeakerEnabled: Boolean = false,
 
-    val isMinimized: Boolean = false
+    val isMinimized: Boolean = false,
+    
+    // Track if user answered via CallKit before Sync arrived
+    val pendingAnswer: Boolean = false
 )
 
 

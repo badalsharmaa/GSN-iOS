@@ -4,7 +4,7 @@ android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.11.0"
-trixnity = "4.22.5"
+trixnity = "4.22.7"
 androidx-appcompat = "1.7.1"
 androidx-core = "1.17.0"
 androidx-espresso = "3.7.0"
@@ -45,6 +45,8 @@ media3 = "1.8.0"
 compose-icons = "1.1.1"
 webrtc-kmp = "0.125.11"
 arrow = "1.2.4"
+firebaseMessaging = "25.0.1"
+googleServices = "4.4.4"
 
 
 
@@ -144,6 +146,9 @@ media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = 
 media3-exoplayer-dash = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "media3" }
 media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebaseMessaging" }
+#firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessaging" }
+
 
 
 [bundles]
@@ -201,3 +206,4 @@ buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig"
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 ktorfit = { id = "de.jensklingenberg.ktorfit", version.ref = "ktorfit" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }

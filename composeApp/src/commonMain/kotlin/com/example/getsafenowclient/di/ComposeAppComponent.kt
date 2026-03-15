@@ -1,9 +1,12 @@
 package com.example.getsafenowclient.di
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import co.touchlab.kermit.Logger
 import com.example.getsafenowclient.call.CallBackgroundManager
 import com.example.getsafenowclient.call.CallScreenModel
 import com.example.getsafenowclient.call.CallSignalingHandler
+import com.example.getsafenowclient.call.repository.CallStateRepository
 import com.example.getsafenowclient.call.webrtc.WebRtcManager
 import com.example.getsafenowclient.common.hardware.CallRingtoneController
 import com.example.getsafenowclient.common.hardware.SpeakerController
@@ -33,6 +36,9 @@ abstract class ComposeAppComponent(
     // 1. Ensure SessionManager is a singleton in this component
     abstract val sessionManager: SessionManager
     
+    // Global sync state manager
+    abstract val globalSyncManager: com.example.getsafenowclient.service.GlobalSyncManager
+    
     @AppScope
     @Provides
     fun provideRoomComponentStore(): RoomComponentStore = RoomComponentStore()
@@ -41,6 +47,9 @@ abstract class ComposeAppComponent(
 
     // 📞 Expose the global call model
     abstract val callModel: CallScreenModel
+    
+    // 🔔 Expose notification permission
+    abstract val notificationPermission: com.example.getsafenowclient.permissions.NotificationPermission
 
     @Provides fun provideSettings(): Settings = getPlatformSettings()
     @Provides fun provideLogger(): Logger = getLogger("GSN")
@@ -106,6 +115,28 @@ abstract class ComposeAppComponent(
 
     @AppScope
     @Provides
+    fun provideNotificationPermission(contextFactory: ContextFactory): com.example.getsafenowclient.permissions.NotificationPermission {
+        return com.example.getsafenowclient.permissions.NotificationPermissionImpl(contextFactory)
+    }
+
+    // ✅ DataStore provider using expect/actual pattern
+    @AppScope
+    @Provides
+    fun provideDataStore(contextFactory: ContextFactory): DataStore<Preferences> {
+        return createCallStateDataStore(contextFactory)
+    }
+    
+    // ✅ CallStateRepository for call persistence
+    @AppScope
+    @Provides
+    fun provideCallStateRepository(
+        dataStore: DataStore<Preferences>
+    ): CallStateRepository {
+        return CallStateRepository(dataStore)
+    }
+    
+    @AppScope
+    @Provides
     fun provideCallScreenModel(
         webrtc: WebRtcManager,
         signaling: CallSignalingHandler,
@@ -113,7 +144,8 @@ abstract class ComposeAppComponent(
         sessionManager: SessionManager,
         callBackgroundManager: CallBackgroundManager,
         cameraPermission: com.example.getsafenowclient.permissions.CameraPermission,
-        microphonePermission: com.example.getsafenowclient.permissions.MicrophonePermission
+        microphonePermission: com.example.getsafenowclient.permissions.MicrophonePermission,
+        callStateRepository: CallStateRepository  // ✅ Injected
     ): CallScreenModel {
         return CallScreenModel(
             webrtc = webrtc,
@@ -122,10 +154,17 @@ abstract class ComposeAppComponent(
             clientProvider = { sessionManager.getClient() },
             backgroundManager = callBackgroundManager,
             cameraPermission = cameraPermission,
-            microphonePermission = microphonePermission
+            microphonePermission = microphonePermission,
+            callStateRepository = callStateRepository  // ✅ Passed
         )
     }
 }
+
+/**
+ * Platform-specific DataStore creation.
+ * Implemented in androidMain and iosMain.
+ */
+expect fun createCallStateDataStore(contextFactory: ContextFactory): DataStore<Preferences>
 
 @KmpComponentCreate
 expect fun createComposeAppComponent(contextFactory: ContextFactory): ComposeAppComponent
